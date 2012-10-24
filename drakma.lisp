@@ -472,9 +472,15 @@
   (let* ((parsed-uri (puri:parse-uri uri))
          (host (puri:uri-host parsed-uri))
          (port (or (puri:uri-port parsed-uri) 80))
+         ;; create a future to associate with the request
+         (future (as:make-future))
          ;; create a socket w/ nil callbacks (but importantly, we mark it not
          ;; to drain the read buffer, which allows us to wrap it in a stream).
-         (socket (as:tcp-send host port nil nil nil
+         (socket (as:tcp-send host port
+                   nil
+                   nil
+                   ;; forward socket events tot he future
+                   (lambda (ev) (as:signal-event future ev))
                    :read-timeout 3
                    :write-timeout 3
                    :dont-drain-read-buffer t))
@@ -482,8 +488,6 @@
          (stream (make-instance 'as::async-io-stream :socket socket))
          ;; make a drakma-specific stream.
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))
-         ;; create a future to associate with the request
-         (future (as:make-future))
          ;; call *our* version of http-request which we defined above, making
          ;; sure we save the resulting callback.
          (req-cb (apply

@@ -1,6 +1,7 @@
 (defpackage :drakma-async
   (:use :cl :drakma :flexi-streams)
-  (:export #:http-async))
+  (:export #:http-async)
+  (:nicknames :das))
 
 (in-package :drakma)
 (defun http-request-async (uri &rest args

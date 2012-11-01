@@ -470,23 +470,18 @@
      (body status headers uri stream must-close status-text)
 
    The callbacks will be called when the request completes."
-  (let* ((parsed-uri (puri:parse-uri uri))
-         (host (puri:uri-host parsed-uri))
-         (port (or (puri:uri-port parsed-uri) 80))
-         ;; create a future to associate with the request
-         (future (as:make-future))
-         ;; create a socket w/ nil callbacks (but importantly, we mark it not
-         ;; to drain the read buffer, which allows us to wrap it in a stream).
-         (socket (as:tcp-send host port
-                   nil
-                   nil
-                   ;; forward socket events tot he future
-                   (lambda (ev) (as:signal-event future ev))
-                   :read-timeout 3
-                   :write-timeout 3
-                   :dont-drain-read-buffer t))
-         ;; create a stream wrapping around the socket we just created.
-         (stream (make-instance 'as::async-io-stream :socket socket))
+  ;; TODO: allow passing in of TCP stream so more than one request can happen on
+  ;; a socket
+  (let* ((future (as:make-future))
+         ;; filled in later
+         (finish-cb nil)
+         ;; create an http-stream we can drain data from once a response comes in
+         (stream (as:http-client-stream
+                   uri
+                   (lambda (stream)
+                     (funcall finish-cb stream))
+                   (lambda (ev)
+                     (as:signal-event future ev))))
          ;; make a drakma-specific stream.
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))
          ;; call *our* version of http-request which we defined above, making
@@ -514,10 +509,10 @@
                      #+:openmcl (list :deadline deadline)))))
     ;; overwrite the socket's read callback to handle req-cb and finish the
     ;; future with the computed values.
-    (as:write-socket-data socket nil
-      :read-cb (lambda (sock data)
-                 (declare (ignore sock data))
-                 (apply #'as:finish (append (list future ) (multiple-value-list (funcall req-cb http-stream))))))
+    (setf finish-cb (lambda (stream)
+                      (declare (ignore sock data))
+                      (apply #'as:finish (append (list future) (multiple-value-list (funcall req-cb http-stream))))
+                      (close stream)))
     ;; let the app attach callbacks to the future
     future))
 

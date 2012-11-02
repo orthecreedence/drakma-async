@@ -417,7 +417,8 @@
 
 
 (in-package :drakma-async)
-(defun http-async (uri &key (protocol :http/1.1)
+(defun http-async (uri &rest args
+                       &key (protocol :http/1.1)
                             (method :get)
                             force-ssl
                             certificate
@@ -498,32 +499,11 @@
          (req-cb (apply
                    #'drakma::http-request-async
                    (append
-                     (list uri :protocol protocol :method method :force-ssl force-ssl
-                           :certificate certificate :key key
-                           :certificate-password certificate-password :verify verify
-                           :max-depth max-depth :ca-file ca-file :ca-directory ca-directory
-                           :parameters parameters :content content :content-type content-type)
-                     (when content-length-provided-p (list :content-length content-length))
-                     (list :content-length content-length :form-data form-data
-                           :cookie-jar cookie-jar :basic-authorization basic-authorization
-                           :user-agent user-agent :accept accept :range range :proxy proxy
-                           :proxy-basic-authorization proxy-basic-authorization
-                           :additional-headers additional-headers :redirect redirect
-                           :redirect-methods redirect-methods :auto-referer auto-referer
-                           :keep-alive keep-alive :external-format-out external-format-out
-                           :external-format-in external-format-in :force-binary force-binary
-                           :preserve-uri preserve-uri
-                           ;; custom parameters we hijack
+                     (list uri
                            :close nil
                            :want-stream nil
                            :stream http-stream)
-                     #+(or abcl clisp lispworks mcl openmcl sbcl)
-                       (list :connection-timeout connection-timeout)
-                     #+:lispworks
-                       (list :read-timeout read-timeout)
-                     #+(and :lispworks (not :lw-does-not-have-write-timeout))
-                       (list :write-timeout write-timeout)
-                     #+:openmcl (list :deadline deadline)))))
+                     args))))
     ;; overwrite the socket's read callback to handle req-cb and finish the
     ;; future with the computed values.
     (setf finish-cb (lambda (stream)
@@ -536,7 +516,8 @@
                         ;; returned, rebind the original future's callbacks to
                         ;; the new one.
                         (unless (functionp (car http-values))
+                          (unless (as:socket-closed-p (as:stream-socket stream))
+                            (close stream))
                           (apply #'as:finish (append (list future) http-values))))))
     ;; let the app attach callbacks to the future
     future))
-

@@ -507,7 +507,6 @@
     ;; overwrite the socket's read callback to handle req-cb and finish the
     ;; future with the computed values.
     (setf finish-cb (lambda (stream)
-                      (declare (ignore sock data))
                       (let ((http-values (multiple-value-list (funcall req-cb))))
                         ;; if we got a function back, it means we redirected and
                         ;; the original stream was reused, meaning the callbacks

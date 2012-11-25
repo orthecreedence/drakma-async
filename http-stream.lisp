@@ -172,11 +172,12 @@
             (t
               (error "Got neither Content-Length nor chunked transfer."))))))))
     
+(defparameter *stream-buffer* (make-array 8096 :element-type '(unsigned-byte 8)))
+
 (defun http-request-complete-stream (uri request-cb event-cb &key timeout)
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
-  (check-event-loop-running)
   (let* ((parsed-uri (puri:parse-uri uri))
          (host (puri:uri-host parsed-uri))
          (port (or (puri:uri-port parsed-uri) 80))
@@ -193,39 +194,41 @@
                  ;; entire response + whatever extra data there is and ship it off to
                  ;; whoever's interested in it.
                  (setf response-finished-p t)
-                 (let ((evbuf (le:bufferevent-get-input (socket-c sock)))
+                 (let ((evbuf (le:bufferevent-get-input (as::socket-c sock)))
                        (remaining-buffer-data nil))
                    ;; if the evbuffer has a length > 0, grab any data left on it
                    (unless (eq (le:evbuffer-get-length evbuf) 0)
-                     (setf remaining-buffer-data (drain-evbuffer evbuf)))
+                     (setf remaining-buffer-data (as::drain-evbuffer evbuf)))
                    ;; write the response + any extra data back into the evbuffer
                    (le:evbuffer-unfreeze evbuf 0)  ; input buffers by default disable writing
-                   (write-to-evbuffer evbuf response-data)
+                   (as::write-to-evbuffer evbuf response-data)
                    (le:evbuffer-freeze evbuf 0)  ; re-enable write freeze
                    (when remaining-buffer-data
                      ;; write existing data back onto end of evbuffer
-                     (write-to-evbuffer evbuf remaining-buffer-data)))
+                     (as::write-to-evbuffer evbuf remaining-buffer-data)))
                  ;; create a stream and send it to the request-cb
-                 (let ((stream (make-instance 'async-io-stream :socket sock)))
+                 (let ((stream (make-instance 'as:async-io-stream :socket sock)))
                    (funcall request-cb stream))))))
-      (tcp-send host port nil
-        ;; drai the bufferevent, and parse all the aquired data. once we have a
+      (as:tcp-send host port nil
+        ;; drain the bufferevent, and parse all the aquired data. once we have a
         ;; full response, pump the data back into the bufferevent's output buffer
         ;; and call out finish-cb with an async-io-stream wrapping the socket.
-        (lambda (sock data)
-          (finish-request sock data))
+        (lambda (sock stream)
+          (loop for num-bytes = (read-sequence *stream-buffer* stream :end 8096)
+                while (< 0 num-bytes) do
+            (finish-request sock (subseq *stream-buffer* 0 num-bytes))))
         ;; Wrap the event handler to catch EOF events (if a server sends
         ;; EOF, the response is done sending).
         (lambda (ev)
           (handler-case (error ev)
-            (tcp-eof ()
-              (let ((sock (tcp-socket ev)))
+            (as:tcp-eof ()
+              (let ((sock (as:tcp-socket ev)))
                 (finish-request sock :eof))
               (funcall event-cb (make-instance 'http-eof
                                                :code -1
                                                :msg "HTTP stream client peer closed connection.")))
-            (tcp-timeout ()
-              (funcall event-cb (make-instance 'http-timeout
+            (as:tcp-timeout ()
+              (funcall event-cb (make-instance 'as:http-timeout
                                                :code -1
                                                :msg "HTTP stream client timed out.")))
             (t ()

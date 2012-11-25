@@ -5,4 +5,7 @@
   :description "An asynchronous port of the Drakma HTTP client."
   :depends-on (#:cl-async #:flexi-streams #:drakma)
   :components
-  ((:file "drakma" )))
+  ((:file "package")
+   (:file "http-stream" :depends-on ("package"))
+   (:file "hijack" :depends-on ("http-stream"))
+   (:file "drakma" :depends-on ("hijack"))))

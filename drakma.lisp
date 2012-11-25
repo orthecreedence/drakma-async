@@ -62,16 +62,16 @@
    The callbacks will be called when the request completes."
   ;; TODO: allow passing in of TCP stream so more than one request can happen on
   ;; a socket
-  (let* ((future (as:make-future))
+  (let* ((future (make-future))
          ;; filled in later
          (finish-cb nil)
          ;; create an http-stream we can drain data from once a response comes in
-         (stream (as:http-client-stream
+         (stream (http-request-complete-stream
                    uri
                    (lambda (stream)
                      (funcall finish-cb stream))
                    (lambda (ev)
-                     (as:signal-event future ev))
+                     (signal-error future ev))
                    :timeout (if (boundp 'connection-timeout)
                                 connection-timeout
                                 20)))
@@ -100,6 +100,6 @@
                         (unless (functionp (car http-values))
                           (unless (as:socket-closed-p (as:stream-socket stream))
                             (close stream))
-                          (apply #'as:finish (append (list future) http-values))))))
+                          (apply #'finish (append (list future) http-values))))))
     ;; let the app attach callbacks to the future
     future))

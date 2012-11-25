@@ -411,5 +411,3 @@
                    (not (eq content :continuation)))
           (ignore-errors (close http-stream)))))))
 
-
-

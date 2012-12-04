@@ -3,18 +3,9 @@ drakma-async
 This is a port of the wonderful [drakma](http://weitz.de/drakma/) library to run
 on top of [cl-async](https://github.com/orthecreedence/cl-async).
 
-The goal is to support 100% of drakma's features, but provide an asynchronous
-interface. A lofty goal, yes, but I believe attainable.
-
-### Please don't use this yet
-This has only been minimally tested. It requires cl-async's
-[future+stream](https://github.com/orthecreedence/cl-async/tree/future+stream)
-branch to operate correctly, as it uses both TCP/HTTP streams and futures.
-
-__It is highly experimental.__
-
-I plan to do a lot more testing and polishing on it before publishing, so
-consider it alpha for now.
+Although working and (nearly) API-compatible with drakma, I recommend *not using
+drakma-async* until this notice is removed (unless you wish to help
+building/testing).
 
 Documentation
 -------------

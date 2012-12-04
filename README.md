@@ -18,23 +18,26 @@ consider it alpha for now.
 
 Documentation
 -------------
-Here's a simple usage example:
+Here's a simple usage example (using the [cl-async future macros](http://orthecreedence.github.com/cl-async/future#nicer-syntax)):
 
 ```common-lisp
 (defun my-http-request ()
-  (let* ((url "http://www.google.com/")
-         (future (drakma-async:http-async url)))
-    (as:set-event-handler future (lambda (ev) (format t "future ev: ~a~%" ev)))
-    (as:attach future
-	  ;; lambda list is the same as values returned by drakma:http-request
-	  (lambda (body status headers uri stream must-close status-text)
-        (format t "body:~%~a~%" body)))))
+  (future-handler-case
+    (multiple-future-bind (body status headers)
+        (das:http-request "https://www.google.com/")
+      (format t "Status: ~a~%" status)
+      (format t "Headers: ~s~%" headers)
+      (format t "Body: ~a~%" (if (stringp body) body (babel:octets-to-string body))))
+    (http-eof ()
+      (format t "Server hung up unexpectedly =[~%"))
+    (t (e)
+      (format t "Error: ~a~%" e))))
 
-(as:start-event-loop #'my-http-request)
+(as:start-event-loop #'my-http-request :catch-app-errors t)
 ```
 
-`http-async` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request)
-except for ones that `http-async` manages directly and aren't exposed:
+`drakma-async:http-request` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request)
+except for ones that `http-request` manages directly and aren't exposed:
 
  - `:close` We always close in this version, fix for this coming soon
  - `:want-stream` Will most likely be re-enabled when `:close` is implemented
@@ -50,7 +53,7 @@ is more than possible, but would change the interface slightly and I want to
 think about the best way to do this.
 
 ### Notes
-`http-async` provides a function in the `drakma` package called `http-request-async`
+`drakma-async` provides a function in the `drakma` package called `http-request-async`
 which mirrors `drakma:http-request`, except for that the final value returned is
 a closure instead of the finished request values. This closure is to be called
 when *all content in the response has been returned*. This is handled by cl-async's
@@ -67,4 +70,6 @@ decoding/streaming asynchronously, but it would be outside the bounds of this
 project (and probably included directly in cl-async's http-stream
 implementation).
 
-Redirects are currently _supported_.
+- Redirects are currently _supported_.
+- SSL is currently _supported+ (via cl-async-ssl) but is *NOT* loaded if
+`:drakma-no-ssl` is present in `*features*` (much like SSL for normal drakma).

@@ -52,8 +52,9 @@
    a value which wraps around an async-io-stream, which wraps around a cl-async
    TCP socket.
    
-   This function is meant to be wrapped by drakma-async:http-async, which takes
-   similar arguments to this one and functions much like the original drakma."
+   This function is meant to be wrapped by drakma-async:http-request, which
+   takes similar arguments to this one and functions much like the original
+   drakma."
   (unless (member protocol '(:http/1.0 :http/1.1) :test #'eq)
     (parameter-error "Don't know how to handle protocol ~S." protocol))
   (setq uri (cond ((uri-p uri) (copy-uri uri))
@@ -355,7 +356,7 @@
                                          (return-from http-request
                                            (apply (if re-use-stream
                                                       #'http-request-async
-                                                      #'drakma-async:http-async)
+                                                      #'drakma-async:http-request)
                                                   (append
                                                     (list
                                                       new-uri

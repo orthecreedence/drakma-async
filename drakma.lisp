@@ -1,47 +1,47 @@
 (in-package :drakma-async)
 
-(defun http-async (uri &rest args
-                       &key (protocol :http/1.1)
-                            (method :get)
-                            force-ssl
-                            certificate
-                            key
-                            certificate-password
-                            verify
-                            max-depth
-                            ca-file
-                            ca-directory
-                            parameters
-                            content
-                            (content-type "application/x-www-form-urlencoded")
-                            (content-length nil content-length-provided-p)
-                            form-data
-                            cookie-jar
-                            basic-authorization
-                            (user-agent :drakma)
-                            (accept "*/*")
-                            range
-                            proxy
-                            proxy-basic-authorization
-                            additional-headers
-                            (redirect 5)
-                            (redirect-methods '(:get :head))
-                            auto-referer
-                            keep-alive
-                            (close t)
-                            (external-format-out *drakma-default-external-format*)
-                            (external-format-in *drakma-default-external-format*)
-                            force-binary
-                            want-stream
-                            stream
-                            preserve-uri
-                            #+(or abcl clisp lispworks mcl openmcl sbcl)
-                            (connection-timeout 20)
-                            #+:lispworks (read-timeout 20)
-                            #+(and :lispworks (not :lw-does-not-have-write-timeout))
-                            (write-timeout 20 write-timeout-provided-p)
-                            #+:openmcl
-                            deadline)
+(defun http-request (uri &rest args
+                         &key (protocol :http/1.1)
+                              (method :get)
+                              force-ssl
+                              certificate
+                              key
+                              certificate-password
+                              verify
+                              max-depth
+                              ca-file
+                              ca-directory
+                              parameters
+                              content
+                              (content-type "application/x-www-form-urlencoded")
+                              (content-length nil content-length-provided-p)
+                              form-data
+                              cookie-jar
+                              basic-authorization
+                              (user-agent :drakma)
+                              (accept "*/*")
+                              range
+                              proxy
+                              proxy-basic-authorization
+                              additional-headers
+                              (redirect 5)
+                              (redirect-methods '(:get :head))
+                              auto-referer
+                              keep-alive
+                              (close t)
+                              (external-format-out *drakma-default-external-format*)
+                              (external-format-in *drakma-default-external-format*)
+                              force-binary
+                              want-stream
+                              stream
+                              preserve-uri
+                              #+(or abcl clisp lispworks mcl openmcl sbcl)
+                              (connection-timeout 20)
+                              #+:lispworks (read-timeout 20)
+                              #+(and :lispworks (not :lw-does-not-have-write-timeout))
+                              (write-timeout 20 write-timeout-provided-p)
+                              #+:openmcl
+                              deadline)
   "This function wraps drakma's new http-request-async function so you don't
    have to deal with the intricacies. For full documentation on this function,
    refer to the docs for drakma:http-request, since most parameters are the

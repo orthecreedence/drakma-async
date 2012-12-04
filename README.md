@@ -44,16 +44,6 @@ except for ones that `http-async` manages directly and aren't exposed:
 ### Unimplemented
 Some things haven't been put in that are worth mentioning
 
-##### SSL
-Since `http-client-stream` in cl-async needs to intercept the incoming request,
-it must be able to decode the data before it receives it. If SSL is implemented
-in drakma (like it is currently), http-stream will have no idea when the response
-has finished.
-
-In order to work around this, I may use SSL through libevent since it supports
-it natively. Obviously, I will try to mimick/copy the parameters and
-functionality that drakma provides as closely as possible.
-
 ##### content -> :continuation
 Passing `:continuation` as the value to `:content` is not implemented. Doing so
 is more than possible, but would change the interface slightly and I want to

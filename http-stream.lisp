@@ -1,3 +1,9 @@
+;;; This file holds an HTTP stream implementation such that data can be written
+;;; to the stream, but its request-cb callback will *only* be invoked when an
+;;; entire response has been returned. If a chunked response is returned, the
+;;; same rule applies: until the last empty chunk is sent, the request-cb isn't
+;;; triggered.
+
 (in-package :drakma-async)
 
 (define-condition http-eof (http-error) ()

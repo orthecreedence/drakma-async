@@ -67,7 +67,7 @@
          (finish-cb nil)
          ;; do some SSL wrapping, if needed
          (parsed-uri (puri:parse-uri uri))
-         (uri-no-ssl (puri:copy-uri parsed-uri :scheme :http))
+         (uri-no-ssl (puri:copy-uri parsed-uri :scheme :http))  ; create a URL that doesn't use SSL
          (proxying-https-p (and proxy (not stream) (eq :https (puri:uri-scheme parsed-uri))))
          (use-ssl (and (not proxying-https-p)
                        (or force-ssl
@@ -82,7 +82,7 @@
                      (signal-error future ev))
                    :ssl use-ssl
                    :timeout timeout))
-         ;; if using SSL, wrap the stream. this preserves our callbacks and junk
+         ;; if using SSL, wrap the stream.
          (stream (if use-ssl
                      (as-ssl:wrap-in-ssl stream
                                          :certificate certificate
@@ -95,7 +95,7 @@
          ;; sure we save the resulting callback.
          (req-cb (apply
                    #'drakma::http-request-async
-                   (append (list uri-no-ssl
+                   (append (list uri-no-ssl  ; make sure the hijacked drakma doesn't try SSL
                                  :close nil
                                  :want-stream nil
                                  :force-ssl nil

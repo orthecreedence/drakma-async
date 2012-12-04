@@ -174,13 +174,14 @@
     
 (defparameter *stream-buffer* (make-array 8096 :element-type '(unsigned-byte 8)))
 
-(defun http-request-complete-stream (uri request-cb event-cb &key timeout ssl-options)
+(defun http-request-complete-stream (uri request-cb event-cb &key timeout ssl)
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
   (let* ((parsed-uri (puri:parse-uri uri))
          (host (puri:uri-host parsed-uri))
-         (port (or (puri:uri-port parsed-uri) 80))
+         (port (or (puri:uri-port parsed-uri)
+                   (if ssl 443 80)))
          (http-parser (make-http-parser))
          (response-finished-p nil)
          (http-stream nil))
@@ -207,7 +208,7 @@
                    (when remaining-buffer-data
                      ;; write existing data back onto end of evbuffer
                      (as::write-to-evbuffer evbuf remaining-buffer-data)))
-                 ;; create a stream and send it to the request-cb
+                 ;; send the finalized stream to the request-cb
                  (funcall request-cb http-stream)))))
       (let ((stream (as:tcp-send
                       host port nil
@@ -217,8 +218,10 @@
                       ;; with an async-io-stream wrapping the socket.
                       (lambda (sock stream)
                         (declare (ignore stream))
+                        (format t "read-cb: ~a~%" (read-sequence *stream-buffer* http-stream :end 8096))
                         (loop for num-bytes = (read-sequence *stream-buffer* http-stream :end 8096)
                               while (< 0 num-bytes) do
+                          (format t "got: ~s~%" (babel:octets-to-string (subseq *stream-buffer* 0 num-bytes)))
                           (finish-request sock (subseq *stream-buffer* 0 num-bytes))))
                       ;; Wrap the event handler to catch EOF events (if a server
                       ;; sends EOF, the response is done sending).
@@ -238,17 +241,6 @@
                             (funcall event-cb ev))))
                       :read-timeout timeout
                       :stream t)))
-        (when ssl-options
-          (setf stream
-                (destructuring-bind (&key certificate key certificate-password verify max-depth ca-file ca-directory)
-                    ssl-options
-                  (cl+ssl:make-ssl-client-stream
-                    stream
-                    ;(le:bufferevent-getfd (as::socket-c (as:stream-socket stream)))
-                    :close-callback (lambda () (close stream))
-                    :certificate certificate
-                    :key key
-                    :password certificate-password))))
         (setf http-stream stream)
         http-stream))))
 

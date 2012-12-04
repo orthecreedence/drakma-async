@@ -67,38 +67,39 @@
          (finish-cb nil)
          ;; do some SSL wrapping, if needed
          (parsed-uri (puri:parse-uri uri))
+         (uri-no-ssl (puri:copy-uri parsed-uri :scheme :http))
          (proxying-https-p (and proxy (not stream) (eq :https (puri:uri-scheme parsed-uri))))
          (use-ssl (and (not proxying-https-p)
                        (or force-ssl
                            (eq (puri:uri-scheme parsed-uri) :https))))
-         ;; create an http-stream we can drain data from once a response comes in
          (timeout (if (boundp 'connection-timeout) connection-timeout 20))
+         ;; create an http-stream we can drain data from once a response comes in
          (stream (http-request-complete-stream
                    uri
                    (lambda (stream) (funcall finish-cb stream))
-                   (lambda (ev) (signal-error future ev))
-                   :timeout timeout
-                   :ssl-options (if use-ssl
-                                    (list :certificate certificate
-                                          :key key
-                                          :certificate-password certificate-password
-                                          :verify verify
-                                          :max-depth max-depth
-                                          :ca-file ca-file
-                                          :ca-directory ca-directory)
-                                    nil)))
+                   (lambda (ev)
+                     (format t "ERR: ~a~%" ev)
+                     (signal-error future ev))
+                   :ssl use-ssl
+                   :timeout timeout))
+         ;; if using SSL, wrap the stream. this preserves our callbacks and junk
+         (stream (if use-ssl
+                     (as-ssl:wrap-in-ssl stream
+                                         :certificate certificate
+                                         :key key
+                                         :password certificate-password)
+                     stream))
          ;; make a drakma-specific stream.
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))
          ;; call *our* version of http-request which we defined above, making
          ;; sure we save the resulting callback.
          (req-cb (apply
                    #'drakma::http-request-async
-                   (append
-                     (list uri
-                           :close nil
-                           :want-stream nil
-                           :stream http-stream)
-                     args))))
+                   (append (list uri-no-ssl
+                                 :close nil
+                                 :want-stream nil
+                                 :force-ssl nil
+                                 :stream http-stream) args))))
     ;; overwrite the socket's read callback to handle req-cb and finish the
     ;; future with the computed values.
     (setf finish-cb (lambda (stream)

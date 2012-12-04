@@ -210,37 +210,34 @@
                      (as::write-to-evbuffer evbuf remaining-buffer-data)))
                  ;; send the finalized stream to the request-cb
                  (funcall request-cb http-stream)))))
-      (let ((stream (as:tcp-send
-                      host port nil
-                      ;; drain the bufferevent, and parse all the aquired data.
-                      ;; once we have a full response, pump the data back into
-                      ;; the bufferevent's output buffer and call out finish-cb
-                      ;; with an async-io-stream wrapping the socket.
-                      (lambda (sock stream)
-                        (declare (ignore stream))
-                        (format t "read-cb: ~a~%" (read-sequence *stream-buffer* http-stream :end 8096))
-                        (loop for num-bytes = (read-sequence *stream-buffer* http-stream :end 8096)
-                              while (< 0 num-bytes) do
-                          (format t "got: ~s~%" (babel:octets-to-string (subseq *stream-buffer* 0 num-bytes)))
-                          (finish-request sock (subseq *stream-buffer* 0 num-bytes))))
-                      ;; Wrap the event handler to catch EOF events (if a server
-                      ;; sends EOF, the response is done sending).
-                      (lambda (ev)
-                        (handler-case (error ev)
-                          (as:tcp-eof ()
-                            (let ((sock (as:tcp-socket ev)))
-                              (finish-request sock :eof))
-                            (funcall event-cb (make-instance 'http-eof
-                                                             :code -1
-                                                             :msg "HTTP stream client peer closed connection.")))
-                          (as:tcp-timeout ()
-                            (funcall event-cb (make-instance 'as:http-timeout
-                                                             :code -1
-                                                             :msg "HTTP stream client timed out.")))
-                          (t ()
-                            (funcall event-cb ev))))
-                      :read-timeout timeout
-                      :stream t)))
-        (setf http-stream stream)
-        http-stream))))
+      (as:tcp-send
+        host port nil
+        ;; drain the bufferevent, and parse all the aquired data.
+        ;; once we have a full response, pump the data back into
+        ;; the bufferevent's output buffer and call out finish-cb
+        ;; with an async-io-stream wrapping the socket.
+        (lambda (sock stream)
+          ;; store the http-stream so the other functions can access it
+          (unless http-stream (setf http-stream stream))
+          (loop for num-bytes = (read-sequence *stream-buffer* http-stream :end 8096)
+                while (< 0 num-bytes) do
+            (finish-request sock (subseq *stream-buffer* 0 num-bytes))))
+        ;; Wrap the event handler to catch EOF events (if a server
+        ;; sends EOF, the response is done sending).
+        (lambda (ev)
+          (handler-case (error ev)
+            (as:tcp-eof ()
+              (let ((sock (as:tcp-socket ev)))
+                (finish-request sock :eof))
+              (funcall event-cb (make-instance 'http-eof
+                                               :code -1
+                                               :msg "HTTP stream client peer closed connection.")))
+            (as:tcp-timeout ()
+              (funcall event-cb (make-instance 'as:http-timeout
+                                               :code -1
+                                               :msg "HTTP stream client timed out.")))
+            (t ()
+              (funcall event-cb ev))))
+        :read-timeout timeout
+        :stream t))))
 

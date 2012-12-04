@@ -65,16 +65,28 @@
   (let* ((future (make-future))
          ;; filled in later
          (finish-cb nil)
+         ;; do some SSL wrapping, if needed
+         (parsed-uri (puri:parse-uri uri))
+         (proxying-https-p (and proxy (not stream) (eq :https (puri:uri-scheme parsed-uri))))
+         (use-ssl (and (not proxying-https-p)
+                       (or force-ssl
+                           (eq (puri:uri-scheme parsed-uri) :https))))
          ;; create an http-stream we can drain data from once a response comes in
+         (timeout (if (boundp 'connection-timeout) connection-timeout 20))
          (stream (http-request-complete-stream
                    uri
-                   (lambda (stream)
-                     (funcall finish-cb stream))
-                   (lambda (ev)
-                     (signal-error future ev))
-                   :timeout (if (boundp 'connection-timeout)
-                                connection-timeout
-                                20)))
+                   (lambda (stream) (funcall finish-cb stream))
+                   (lambda (ev) (signal-error future ev))
+                   :timeout timeout
+                   :ssl-options (if use-ssl
+                                    (list :certificate certificate
+                                          :key key
+                                          :certificate-password certificate-password
+                                          :verify verify
+                                          :max-depth max-depth
+                                          :ca-file ca-file
+                                          :ca-directory ca-directory)
+                                    nil)))
          ;; make a drakma-specific stream.
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))
          ;; call *our* version of http-request which we defined above, making

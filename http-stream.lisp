@@ -216,8 +216,8 @@
                      (as::write-to-evbuffer evbuf remaining-buffer-data)))
                  ;; send the finalized stream to the request-cb
                  (funcall request-cb http-stream)))))
-      (as:tcp-send
-        host port nil
+      (as:tcp-connect
+        host port
         ;; drain the bufferevent, and parse all the aquired data.
         ;; once we have a full response, pump the data back into
         ;; the bufferevent's output buffer and call out finish-cb

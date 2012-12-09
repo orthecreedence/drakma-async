@@ -8,6 +8,7 @@
 			   #:flexi-streams #:drakma)
   :components
   ((:file "package")
-   (:file "http-stream" :depends-on ("package"))
+   (:file "util" :depends-on ("package"))
+   (:file "http-stream" :depends-on ("util"))
    (:file "hijack" :depends-on ("http-stream"))
    (:file "drakma" :depends-on ("hijack"))))

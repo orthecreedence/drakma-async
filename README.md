@@ -35,14 +35,6 @@ except for ones that `http-request` manages directly and aren't exposed:
  - `:stream` drakma-async manages the stream for us, at least until `:close` is
    implemented.
 
-### Unimplemented
-Some things haven't been put in that are worth mentioning
-
-##### content -> :continuation
-Passing `:continuation` as the value to `:content` is not implemented. Doing so
-is more than possible, but would change the interface slightly and I want to
-think about the best way to do this.
-
 ### Notes
 `drakma-async` provides a function in the `drakma` package called `http-request-async`
 which mirrors `drakma:http-request`, except for that the final value returned is

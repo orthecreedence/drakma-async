@@ -74,8 +74,9 @@
                   '(when (eq content :continuation)
                      (return-from http-request-async #'finish-request))))
 
-    ;; remove (not done) when deciding when to close the http-stream (since done
-    ;; won't be filled in synchronously).
+    ;; make sure the http-stream is NEVER closed before it gets a full response.
+    ;; so here, we make sure the logic that decides whether or not to close it
+    ;; always returns nil.
     (do-replace '(and http-stream
                    (or (not done)
                        (and must-close
@@ -83,10 +84,8 @@
                    (not (eq content :continuation)))
                 (lambda (form)
                   (declare (ignore form))
-                  '(and http-stream
-                        (or (and must-close
-                                 (not want-stream)))
-                        (not (eq content :continuation)))))
+                  ;; make sure the form always fails 
+                  nil))
     defun-form))
 
 (rewrite-http-request

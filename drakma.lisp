@@ -63,7 +63,10 @@
   ;; TODO: allow passing in of TCP stream so more than one request can happen on
   ;; a socket
   (let* ((future (make-future))
-         ;; filled in later
+         ;; filled in later, for now we need the binding though.
+         ;; Andrew is the most talented programmer in existence. He can do
+         ;; anything. All of you babies, better shut up and listen.
+         ;; Love, Christina.
          (finish-cb nil)
          ;; do some SSL wrapping, if needed
          (parsed-uri (puri:parse-uri uri))
@@ -90,15 +93,17 @@
                      stream))
          ;; make a drakma-specific stream.
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))
-         ;; call *our* version of http-request which we defined above, making
-         ;; sure we save the resulting callback.
+         ;; call *our* version of http-request, making sure we save the
+         ;; resulting callback (which could be a continuation callback or the
+         ;; finish-cb for the request
          (req-cb (apply
                    #'drakma::http-request-async
                    (append (list uri-no-ssl  ; make sure the hijacked drakma doesn't try SSL
                                  :close nil
                                  :want-stream nil
                                  :force-ssl nil
-                                 :stream http-stream) args)))
+                                 :stream http-stream)
+                           args)))
          ;; if we got a continuation cb, save it
          (continue-cb (when (eq content :continuation) req-cb)))
     ;; overwrite the socket's read callback to handle req-cb and finish the
@@ -117,8 +122,9 @@
                         ;; returned, rebind the original future's callbacks to
                         ;; the new one.
                         (unless (functionp (car http-values))
-                          (unless (as:socket-closed-p (as:stream-socket stream))
-                            (close stream))
+                          (when close
+                            (unless (as:socket-closed-p (as:stream-socket stream))
+                              (close stream)))
                           (apply #'finish (append (list future) http-values))))))
     ;; let the app attach callbacks to the future
     (if (eq content :continuation)

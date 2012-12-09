@@ -66,6 +66,14 @@
                                 (list :stream http-stream))
                               args)))))
 
+    ;; support content :continuation
+    (do-replace '(when (eq content :continuation)
+                  (return-from http-request #'finish-request))
+                (lambda (form)
+                  (declare (ignore form))
+                  '(when (eq content :continuation)
+                     (return-from http-request-async #'finish-request))))
+
     ;; remove (not done) when deciding when to close the http-stream (since done
     ;; won't be filled in synchronously).
     (do-replace '(and http-stream

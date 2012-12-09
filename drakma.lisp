@@ -78,7 +78,6 @@
                    uri
                    (lambda (stream) (funcall finish-cb stream))
                    (lambda (ev)
-                     (format t "ERR: ~a~%" ev)
                      (signal-error future ev))
                    :ssl use-ssl
                    :timeout timeout))
@@ -99,11 +98,18 @@
                                  :close nil
                                  :want-stream nil
                                  :force-ssl nil
-                                 :stream http-stream) args))))
+                                 :stream http-stream) args)))
+         ;; if we got a continuation cb, save it
+         (continue-cb (when (eq content :continuation) req-cb)))
     ;; overwrite the socket's read callback to handle req-cb and finish the
     ;; future with the computed values.
     (setf finish-cb (lambda (stream)
-                      (let ((http-values (multiple-value-list (funcall req-cb))))
+                      (let ((http-values (multiple-value-list
+                                           (funcall (if (equal req-cb continue-cb)
+                                                        ;; get the REAL req-cb
+                                                        (funcall continue-cb nil)
+                                                        ;; have a req-cb, call it
+                                                        req-cb)))))
                         ;; if we got a function back, it means we redirected and
                         ;; the original stream was reused, meaning the callbacks
                         ;; will still function fine. take no action. otherwise,
@@ -115,4 +121,11 @@
                             (close stream))
                           (apply #'finish (append (list future) http-values))))))
     ;; let the app attach callbacks to the future
-    future))
+    (if (eq content :continuation)
+        ;; return a wrapper that calls the continuation function
+        (lambda (data &optional continuep)
+          (funcall continue-cb data continuep)
+          future)
+        ;; request is 100% sent, just return a future
+        future)))
+

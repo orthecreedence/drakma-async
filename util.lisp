@@ -49,7 +49,7 @@
          (funcall rewrite-child-fn (funcall replace-fn tree)))
         ((listp tree)
          (loop for i from 0
-               for leaf in (if (listp (cdr tree))
+               for leaf in (if (listp (cdr tree))  ; gracefully handle dotted pairs
                                tree
                                (list (car tree) (cdr tree))) do
            (let* ((rewrite-child-fn (lambda (replaced) (setf (nth i tree) replaced)))

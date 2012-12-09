@@ -23,6 +23,7 @@
                               range
                               proxy
                               proxy-basic-authorization
+                              real-host
                               additional-headers
                               (redirect 5)
                               (redirect-methods '(:get :head))

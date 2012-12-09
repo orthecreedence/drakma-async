@@ -14,7 +14,7 @@
    match. :* and :... can be changed to your liking via :wildcard-marker and
    :rest-marker respectively."
   (if (and (listp form)
-             (listp wildcard-item))
+           (listp wildcard-item))
       ;; we're dealing with two lists, perform a deeper comparison
       (let ((num-forms-processed 0))
         ;; loop over the forms for each item and do a comparison
@@ -22,10 +22,11 @@
               for form1 in form
               for form2 in wildcard-item do
           (cond ((eql form2 wildcard-marker)
-                 ;; do nothing, since a wildcard will match anything
+                 ;; do nothing, since a wildcard will match anything (continue
+                 ;; the loop)
                  )
                 ((eql form2 rest-marker)
-                 ;; the rest of the search forms will match since we got a ...
+                 ;; the rest of the search forms will match since we got a :...
                  (return-from wildcard-equal t))
                 (t
                  ;; perform a comparison. if the two forms aren't equal, return nil
@@ -48,7 +49,9 @@
          (funcall rewrite-child-fn (funcall replace-fn tree)))
         ((listp tree)
          (loop for i from 0
-               for leaf in tree do
+               for leaf in (if (listp (cdr tree))
+                               tree
+                               (list (car tree) (cdr tree))) do
            (let* ((rewrite-child-fn (lambda (replaced) (setf (nth i tree) replaced)))
                   (result (tree-search-replace leaf search-item replace-fn :rewrite-child-fn rewrite-child-fn)))
              (when result

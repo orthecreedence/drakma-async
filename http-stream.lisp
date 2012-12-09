@@ -6,8 +6,8 @@
 
 (in-package :drakma-async)
 
-(define-condition http-eof (http-error) ()
-  (:report (lambda (c s) (format s "HTTP connection EOF: ~a: ~a" (conn-errcode c) (conn-errmsg c))))
+(define-condition http-eof (as:http-error) ()
+  (:report (lambda (c s) (format s "HTTP connection EOF: ~a: ~a" (as:conn-errcode c) (as:conn-errmsg c))))
   (:documentation "Passed to an event callback when an HTTP peer closes the connection."))
 
 (defparameter *scanner-header-parse-line*

@@ -79,7 +79,6 @@
                         (or (and must-close
                                  (not want-stream)))
                         (not (eq content :continuation)))))
-    (format t "DEFUn: ~a~%" (length defun-form))
     defun-form))
 
 (rewrite-http-request

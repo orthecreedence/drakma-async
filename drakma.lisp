@@ -100,10 +100,9 @@
          (req-cb (apply
                    #'drakma::http-request-async
                    (append (list uri-no-ssl  ; make sure the hijacked drakma doesn't try SSL
-                                 :close nil
-                                 :want-stream nil
-                                 :force-ssl nil
-                                 :stream http-stream)
+                                 :close nil  ; we handle closing ourselves
+                                 :force-ssl nil  ; we handle SSL here
+                                 :stream http-stream)  ; pass in our own stream
                            args)))
          ;; if we got a continuation cb, save it
          (continue-cb (when (eq content :continuation) req-cb)))

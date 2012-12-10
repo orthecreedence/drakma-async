@@ -64,6 +64,13 @@ decoding/streaming asynchronously, but it would be outside the bounds of this
 project (and probably included directly in cl-async's http-stream
 implementation).
 
-- Redirects are currently _supported_.
-- SSL is currently _supported+ (via cl-async-ssl) but is *NOT* loaded if
-`:drakma-no-ssl` is present in `*features*` (much like SSL for normal drakma).
+Redirects __are__ supported, and the interface is the same as drakma's.
+
+Porting of `drakma:http-request` to `drakma:http-request-async` is now completely
+automated through the use of the `rewrite-http-request` macro (along with some
+tree search/replace funciton in [util.lisp](https://github.com/orthecreedence/drakma-async/blob/master/util.lisp)).
+This makes upgrading `drakma-async` to use the latest version of drakma as
+simple as copying the `http-request` function from drakma's request.lisp and
+pasting it inside the `(rewrite-http-request ...)` macro in drakma-aync's
+hijack.lisp. This saves me a lot of time doing manual porting, and makes it
+easy to use another version of drakma if that's required.

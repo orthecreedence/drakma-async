@@ -27,20 +27,15 @@ Here's a simple usage example (using the [cl-async future macros](http://orthecr
 (as:start-event-loop #'my-http-request :catch-app-errors t)
 ```
 
-`drakma-async:http-request` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request)
-except for ones that `http-request` manages directly and aren't exposed:
-
- - `:close` We always close in this version, fix for this coming soon
- - `:want-stream` Will most likely be re-enabled when `:close` is implemented
- - `:stream` drakma-async manages the stream for us, at least until `:close` is
-   implemented.
+`drakma-async:http-request` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request),
+and does its absolute best to have the exact same behavior.
 
 ### Notes
 `drakma-async` provides a function in the `drakma` package called `http-request-async`
 which mirrors `drakma:http-request`, except for that the final value returned is
 a closure instead of the finished request values. This closure is to be called
-when *all content in the response has been returned*. This is handled by cl-async's
-[http-stream implementation](https://github.com/orthecreedence/cl-async/blob/future%2Bstream/http-stream.lisp)
+when *all content in the response has been returned*. This is handled by the
+[http-stream implementation](https://github.com/orthecreedence/drakma-async/blob/master/http-stream.lisp)
 which is able to tell when a response has been completely downloaded. Once the
 closure is called, it reads all the data from the http-stream the request was
 sent on, and parses it via drakma's normal capabilities.

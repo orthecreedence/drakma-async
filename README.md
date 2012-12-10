@@ -28,6 +28,24 @@ Here's a simple usage example (using the [cl-async future macros](http://orthecr
 `drakma-async:http-request` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request),
 and does its absolute best to have the exact same behavior.
 
+### Tests
+`drakma-async` comes with a test suite:
+
+```common-lisp
+(ql:quickload :drakma-async-test)
+
+(drakma-async-test:run-tests)
+```
+
+### SSL
+This library makes use of the `cl-async-ssl` package, which is an add-on package
+for `cl-async` to provide SSL functionality. `drakma-async` will use SSL by
+default, unless `:drakma-no-ssl` is present in `*features*` during load/compile
+time.
+
+Same goes for the test suite: if `:drakma-no-ssl` is present in `*features*`
+when the tests are loaded, no SSL tests are performed.
+
 ### Notes
 `drakma-async` provides a function in the `drakma` package called `http-request-async`
 which mirrors `drakma:http-request`, except for that the final value returned is

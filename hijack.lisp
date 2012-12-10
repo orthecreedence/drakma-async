@@ -46,7 +46,6 @@
                   (declare (ignore form))
                  '(unless re-use-stream
                     (remf args :close)
-                    (remf args :want-stream)
                     (remf args :stream)
                     (ignore-errors (close http-stream)))))
 

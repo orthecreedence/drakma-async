@@ -180,7 +180,7 @@
     
 (defparameter *stream-buffer* (make-array 8096 :element-type '(unsigned-byte 8)))
 
-(defun http-request-complete-stream (uri request-cb event-cb &key timeout ssl)
+(defun http-request-complete-stream (uri request-cb event-cb &key stream timeout ssl)
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
@@ -190,6 +190,15 @@
                    (if ssl 443 80)))
          (http-parser (make-http-parser))
          (response-finished-p nil)
+         (existing-socket (let ((tmp-stream stream))
+                            ;; try to drill down and find the underlying socket
+                            ;; in the passed in stream
+                            (when (subtypep (type-of tmp-stream) 'flexi-streams:flexi-stream)
+                              (setf tmp-stream (flexi-streams:flexi-stream-stream stream)))
+                            (when (subtypep (type-of tmp-stream) 'chunga:chunked-stream)
+                              (setf tmp-stream (chunga:chunked-stream-stream tmp-stream)))
+                            (when (subtypep (type-of tmp-stream) 'as:async-stream)
+                              (as:stream-socket tmp-stream))))
          (http-stream nil))
     (flet ((finish-request (sock data)
              (multiple-value-bind (finishedp response-data)
@@ -216,34 +225,39 @@
                      (as::write-to-evbuffer evbuf remaining-buffer-data)))
                  ;; send the finalized stream to the request-cb
                  (funcall request-cb http-stream)))))
-      (as:tcp-connect
-        host port
-        ;; drain the bufferevent, and parse all the aquired data.
-        ;; once we have a full response, pump the data back into
-        ;; the bufferevent's output buffer and call out finish-cb
-        ;; with an async-io-stream wrapping the socket.
-        (lambda (sock stream)
-          ;; store the http-stream so the other functions can access it
-          (unless http-stream (setf http-stream stream))
-          (loop for num-bytes = (read-sequence *stream-buffer* http-stream :end 8096)
-                while (< 0 num-bytes) do
-            (finish-request sock (subseq *stream-buffer* 0 num-bytes))))
-        ;; Wrap the event handler to catch EOF events (if a server
-        ;; sends EOF, the response is done sending).
-        (lambda (ev)
-          (handler-case (error ev)
-            (as:tcp-eof ()
-              (let ((sock (as:tcp-socket ev)))
-                (finish-request sock :eof))
-              (funcall event-cb (make-instance 'http-eof
-                                               :code -1
-                                               :msg "HTTP stream client peer closed connection.")))
-            (as:tcp-timeout ()
-              (funcall event-cb (make-instance 'as:http-timeout
-                                               :code -1
-                                               :msg "HTTP stream client timed out.")))
-            (t ()
-              (funcall event-cb ev))))
-        :read-timeout timeout
-        :stream t))))
+      (let ((read-cb (lambda (sock stream)
+                       ;; store the http-stream so the other functions can access it
+                       (unless http-stream (setf http-stream stream))
+                       (loop for num-bytes = (read-sequence *stream-buffer* http-stream :end 8096)
+                             while (< 0 num-bytes) do
+                             (finish-request
+                               sock
+                               (subseq *stream-buffer* 0 num-bytes)))))
+            (event-cb (lambda (ev)
+                        (handler-case (error ev)
+                          (as:tcp-eof ()
+                            (let ((sock (as:tcp-socket ev)))
+                              (finish-request sock :eof))
+                            (funcall event-cb (make-instance 'http-eof
+                                                             :code -1
+                                                             :msg "HTTP stream client peer closed connection.")))
+                          (as:tcp-timeout ()
+                            (funcall event-cb (make-instance 'as:http-timeout
+                                                             :code -1
+                                                             :msg "HTTP stream client timed out.")))
+                          (t ()
+                            (funcall event-cb ev))))))
+        (if existing-socket
+            ;; we have an existing socket, rewrite its callbacks
+            (progn
+              (as:write-socket-data existing-socket nil
+                :read-cb read-cb
+                :event-cb event-cb)
+              (make-instance 'as:async-io-stream :socket existing-socket))
+            ;; new socket/stream
+            (as:tcp-connect
+              host port
+              read-cb event-cb
+              :read-timeout timeout
+              :stream t))))))
 

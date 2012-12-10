@@ -36,10 +36,8 @@
                               want-stream
                               stream
                               preserve-uri
-                              #+(or abcl clisp lispworks mcl openmcl sbcl)
-                              (connection-timeout 20)
-                              #+:lispworks (read-timeout 20)
-                              #+(and :lispworks (not :lw-does-not-have-write-timeout))
+                              ;(connection-timeout 20)
+                              (read-timeout 20)
                               (write-timeout 20 write-timeout-provided-p)
                               #+:openmcl
                               deadline)
@@ -61,8 +59,7 @@
      (body status headers uri stream must-close status-text)
 
    The callbacks will be called when the request completes."
-  ;; TODO: allow passing in of TCP stream so more than one request can happen on
-  ;; a socket
+  (remf args :read-timeout)  ; read-timeout is handled in this function
   (let* ((future (make-future))
          ;; filled in later, for now we need the binding though.
          ;; Andrew is the most talented programmer in existence. He can do
@@ -76,13 +73,14 @@
          (use-ssl (and (not proxying-https-p)
                        (or force-ssl
                            (eq (puri:uri-scheme parsed-uri) :https))))
-         (timeout (if (boundp 'connection-timeout) connection-timeout 20))
+         (timeout read-timeout)
          ;; create an http-stream we can drain data from once a response comes in
          (stream (http-request-complete-stream
                    uri
                    (lambda (stream) (funcall finish-cb stream))
                    (lambda (ev)
                      (signal-error future ev))
+                   :stream stream  ; if we got a stream passed in, wrap it
                    :ssl use-ssl
                    :timeout timeout))
          ;; if using SSL, wrap the stream.
@@ -101,7 +99,7 @@
                    #'drakma::http-request-async
                    (append (list uri-no-ssl  ; make sure the hijacked drakma doesn't try SSL
                                  :close nil  ; we handle closing ourselves
-                                 :force-ssl nil  ; we handle SSL here
+                                 :force-ssl nil  ; we handle SSL ourselves, TYVM
                                  :stream http-stream)  ; pass in our own stream
                            args)))
          ;; if we got a continuation cb, save it
@@ -122,7 +120,7 @@
                         ;; returned, rebind the original future's callbacks to
                         ;; the new one.
                         (unless (functionp (car http-values))
-                          (when close
+                          (when (and close (not want-stream))
                             (unless (as:socket-closed-p (as:stream-socket stream))
                               (close stream)))
                           (apply #'finish (append (list future) http-values))))))
@@ -132,6 +130,6 @@
         (lambda (data &optional continuep)
           (funcall continue-cb data continuep)
           future)
-        ;; request is 100% sent, just return a future
+        ;; request is 100% sent, just return the future
         future)))
 

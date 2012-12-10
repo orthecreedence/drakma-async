@@ -1,10 +1,15 @@
 (in-package :drakma)
 
 (defmacro rewrite-http-request (defun-form)
-  "this macro automates the conversion from drakma:http-request to be
+  "This macro automates the conversion from drakma:http-request to be
    asynchronous (http-request-async). It does this by performing recursive tree
    searches on the main http-request defun and replacing certain pieces with
-   async-ready code."
+   async-ready code.
+
+   It was built because I had to keep porting new versions of drakma over by
+   hand. This is all fine and dandy, but why do it by hand when you can
+   automate it. Now I can copy and paste http-request from any drakma version
+   into a (rewrite-http-request ...) macro and all is well in async land."
   (macrolet ((do-replace (form fn)
                `(let ((replacement (drakma-async::tree-search-replace defun-form ,form ,fn)))
                   (if replacement
@@ -77,17 +82,15 @@
     ;; make sure the http-stream is NEVER closed before it gets a full response.
     ;; so here, we make sure the logic that decides whether or not to close it
     ;; always returns nil.
-    (do-replace '(and http-stream
-                   (or (not done)
-                       (and must-close
-                            (not want-stream)))
-                   (not (eq content :continuation)))
+    (do-replace '(when (and http-stream :...) (ignore-errors (close http-stream)))
                 (lambda (form)
                   (declare (ignore form))
                   ;; make sure the form always fails 
-                  nil))
+                  '(when nil nil)))
     defun-form))
 
+;; The http-request form can be pasted here, verbatim, and rewrite-http-request
+;; will automatically make any adjustments it needs to convert it to async.
 (rewrite-http-request
 (defun http-request (uri &rest args
                          &key (protocol :http/1.1)

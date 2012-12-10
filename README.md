@@ -3,9 +3,7 @@ drakma-async
 This is a port of the wonderful [drakma](http://weitz.de/drakma/) library to run
 on top of [cl-async](https://github.com/orthecreedence/cl-async).
 
-Although working and (nearly) API-compatible with drakma, I recommend *not using
-drakma-async* until this notice is removed (unless you wish to help
-building/testing).
+This library is now API-compatible with drakma.
 
 Documentation
 -------------

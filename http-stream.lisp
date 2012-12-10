@@ -23,6 +23,19 @@
   (cl-ppcre:create-scanner "^HTTP/[0-9\\.]+ (?!(100 Continue))" :case-insensitive-mode t)
   "Create a scanner to determine if a response line is a status line.")
 
+(defun get-underlying-socket (stream)
+  "Given a stream (of type flexi, chunga, or async-stream), grab the underlying
+   socket (or return nil)."
+  (let ((tmp-stream stream))
+    ;; try to drill down and find the underlying socket
+    ;; in the passed in stream
+    (when (subtypep (type-of tmp-stream) 'flexi-streams:flexi-stream)
+      (setf tmp-stream (flexi-streams:flexi-stream-stream stream)))
+    (when (subtypep (type-of tmp-stream) 'chunga:chunked-stream)
+      (setf tmp-stream (chunga:chunked-stream-stream tmp-stream)))
+    (when (subtypep (type-of tmp-stream) 'as:async-stream)
+      (as:stream-socket tmp-stream))))
+
 (defun find-non-whitespace-pos (seq)
   "Find the position of the first non-whitespace character in a sequence."
   (loop for i from 0
@@ -190,15 +203,7 @@
                    (if ssl 443 80)))
          (http-parser (make-http-parser))
          (response-finished-p nil)
-         (existing-socket (let ((tmp-stream stream))
-                            ;; try to drill down and find the underlying socket
-                            ;; in the passed in stream
-                            (when (subtypep (type-of tmp-stream) 'flexi-streams:flexi-stream)
-                              (setf tmp-stream (flexi-streams:flexi-stream-stream stream)))
-                            (when (subtypep (type-of tmp-stream) 'chunga:chunked-stream)
-                              (setf tmp-stream (chunga:chunked-stream-stream tmp-stream)))
-                            (when (subtypep (type-of tmp-stream) 'as:async-stream)
-                              (as:stream-socket tmp-stream))))
+         (existing-socket (get-underlying-socket stream))
          (http-stream nil))
     (flet ((finish-request (sock data)
              (multiple-value-bind (finishedp response-data)

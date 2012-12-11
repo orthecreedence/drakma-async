@@ -7,6 +7,9 @@ This library is now API-compatible with drakma.
 
 Documentation
 -------------
+`drakma-async:http-request` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request),
+and does its absolute best to have the exact same behavior.
+
 Here's a simple usage example (using the [cl-async future macros](http://orthecreedence.github.com/cl-async/future#nicer-syntax)):
 
 ```common-lisp
@@ -24,9 +27,6 @@ Here's a simple usage example (using the [cl-async future macros](http://orthecr
 
 (as:start-event-loop #'my-http-request :catch-app-errors t)
 ```
-
-`drakma-async:http-request` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request),
-and does its absolute best to have the exact same behavior.
 
 ### Tests
 `drakma-async` comes with a test suite:

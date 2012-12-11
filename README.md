@@ -8,7 +8,9 @@ This library is now API-compatible with drakma.
 Documentation
 -------------
 `drakma-async:http-request` takes the same arguments as [drakma:http-request](http://weitz.de/drakma/#http-request),
-and does its absolute best to have the exact same behavior.
+and does its absolute best to have the exact same behavior, except instead of
+returning the values of the HTTP request made, it returns a [cl-async future](http://orthecreedence.github.com/cl-async/future)
+that is finished with the values of the HTTP request.
 
 Here's a simple usage example (using the [cl-async future macros](http://orthecreedence.github.com/cl-async/future#nicer-syntax)):
 

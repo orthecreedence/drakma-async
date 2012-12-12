@@ -50,7 +50,7 @@
    values of the request (once it returns):
      (body status headers uri stream must-close status-text)
 
-   This means drakma-async a prime candidate for using the cl-async future
+   This means drakma-async is a prime candidate for using the cl-async future
    macros: http://orthecreedence.github.com/cl-async/future#nicer-syntax"
   (remf args :read-timeout)  ; read-timeout is handled in this function
   (let* ((future (make-future))

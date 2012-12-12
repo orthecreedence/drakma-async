@@ -43,22 +43,15 @@
                               deadline)
   "This function wraps drakma's new http-request-async function so you don't
    have to deal with the intricacies. For full documentation on this function,
-   refer to the docs for drakma:http-request, since most parameters are the
-   same. There are a few parameters that are controlled by this function fully,
-   in particular:
-     :close
-       Always set to nil. This function will handling closing.
-     :want-stream
-       Always set to nil. We'll use our own stream.
-     :stream
-       We pass in our own stream, so you are not allowed to.
+   refer to the docs for drakma:http-request; this library aims to be API
+   compatible with drakma.
 
-   This function returns a cl-async future, to which one or more callbacks can
-   be attached. The callbacks must take the same arguments as the return values
-   of drakma:http-request:
+   This function returns a cl-async future, which is finished with the following
+   values of the request (once it returns):
      (body status headers uri stream must-close status-text)
 
-   The callbacks will be called when the request completes."
+   This means drakma-async a prime candidate for using the cl-async future
+   macros: http://orthecreedence.github.com/cl-async/future#nicer-syntax"
   (remf args :read-timeout)  ; read-timeout is handled in this function
   (let* ((future (make-future))
          ;; filled in later, for now we need the binding though.

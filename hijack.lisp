@@ -72,7 +72,7 @@
 
     ;; support content :continuation
     (do-replace '(when (eq content :continuation)
-                  (return-from http-request #'finish-request))
+                   (return-from http-request #'finish-request))
                 (lambda (form)
                   (declare (ignore form))
                   '(when (eq content :continuation)

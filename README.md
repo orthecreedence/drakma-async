@@ -3,6 +3,11 @@ drakma-async
 This is a port of the wonderful [drakma](http://weitz.de/drakma/) library to run
 on top of [cl-async](https://github.com/orthecreedence/cl-async).
 
+*PLEASE* use the latest (git) versions of [cl-libevent2](/orthecreedence/cl-libevent2)
+and [cl-async](/orthecreedence/cl-async) to run `drakma-async`. If you use the
+quicklisp versions, at the very best SSL won't work, and at the very worst
+nothing will work.
+
 This library is now API-compatible with drakma.
 
 Documentation
@@ -61,13 +66,8 @@ sent on, and parses it via drakma's normal capabilities.
 Obviously the downside to this is that the entire response has to be held in
 memory. For this reason, this library would be best used for smaller requests
 and *sending* large amounts of data as opposed to downloading large amounts of
-data. I may eventually build an HTTP stream that would support
-decoding/streaming asynchronously, but it would be outside the bounds of this
-project (and probably included directly in cl-async's http-stream
-implementation).
-
-Redirects __are__ supported (and transparent), and the interface is the same as
-drakma's.
+data. Note that there is an [issue outlining this problem and a potential fix](/orthecreedence/drakma-async/issues/5),
+but it hasn't been worked on YET.
 
 Porting of `drakma:http-request` to `drakma:http-request-async` is now completely
 automated through the use of the `rewrite-http-request` macro (along with some

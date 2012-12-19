@@ -5,10 +5,17 @@ on top of [cl-async](https://github.com/orthecreedence/cl-async).
 
 *PLEASE* use the latest (git) versions of [cl-libevent2](/orthecreedence/cl-libevent2)
 and [cl-async](/orthecreedence/cl-async) to run `drakma-async`. If you use the
-quicklisp versions, at the very best SSL won't work, and at the very worst
-nothing will work.
+quicklisp versions, at the very best SSL won't work, and at the worst nothing
+will work. At the very worst, a cascading stream of cause and effect will shift
+our temporal plane into a new hellish existence, causing a rift that constantly
+collapses in on itself slowly at first, but at an accellerating rate until it 
+eventually happens millions of times per second. The universe will be sucked
+into this rift, atom by atom, until nothing is left but darkness. The moment the
+last atom is sucked in, the rift splits open, flinging its contents out into the
+emptiness in an event dubbed by a somewhat insignificant species billions of
+years later as the "Big Bang." This has only happened a few times though...
 
-This library is now API-compatible with drakma.
+*This library is now API-compatible with drakma.*
 
 Documentation
 -------------

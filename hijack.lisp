@@ -55,8 +55,8 @@
                   (declare (ignore form))
                   '(return-from http-request
                      (apply (if re-use-stream
-                              #'http-request-async
-                              #'drakma-async:http-request)
+                                #'http-request-async
+                                #'drakma-async:http-request)
                             (append
                               (list
                                 new-uri

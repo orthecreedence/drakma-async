@@ -1,0 +1,4 @@
+This folder exists to aid in comparing different versions of drakma's
+http-request before and after converting it to async. Since the advent of the
+automated http-request rewrite, it's now almost irrelevant, but could still be
+useful if drakma makes bigger changes down the road.

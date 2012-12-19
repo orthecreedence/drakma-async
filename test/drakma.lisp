@@ -117,3 +117,28 @@
             (das:http-request "http://www.google.com")
           (setf http-status status)))
     (is (= http-status 200))))
+
+(test proxy
+  "Test that proxying works. Since this relies on a potentially non-reliable
+   proxy (I picked the first one off a list), feel free to update the tests to
+   use a more reliable proxy."
+  (multiple-value-bind (http-status)
+      (async-let ((http-status))
+        (test-timeout 5)
+        (multiple-future-bind (nil status)
+            (das:http-request "http://www.google.com"
+                              :proxy '("72.64.146.135" 8080))
+          (setf http-status status)))
+    (is (= http-status 200))))
+
+(test proxy-redirect
+  "Test that redirecting works over a proxy."
+  (multiple-value-bind (http-status)
+      (async-let ((http-status))
+        (test-timeout 5)
+        (multiple-future-bind (nil status)
+            (das:http-request "http://google.com"
+                              :proxy '("72.64.146.135" 8080))
+          (setf http-status status)))
+    (is (= http-status 200))))
+

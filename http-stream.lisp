@@ -193,15 +193,11 @@
     
 (defparameter *stream-buffer* (make-array 8096 :element-type '(unsigned-byte 8)))
 
-(defun http-request-complete-stream (uri request-cb event-cb &key stream timeout ssl)
+(defun http-request-complete-stream (host port request-cb event-cb &key stream timeout)
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
-  (let* ((parsed-uri (puri:parse-uri uri))
-         (host (puri:uri-host parsed-uri))
-         (port (or (puri:uri-port parsed-uri)
-                   (if ssl 443 80)))
-         (http-parser (make-http-parser))
+  (let* ((http-parser (make-http-parser))
          (response-finished-p nil)
          (existing-socket (get-underlying-socket stream))
          (http-stream nil))

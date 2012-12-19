@@ -54,10 +54,10 @@
    macros: http://orthecreedence.github.com/cl-async/future#nicer-syntax"
   (remf args :read-timeout)  ; read-timeout is handled in this function
   (let* ((future (make-future))
-         ;; filled in later, for now we need the binding though.
          ;; Andrew is the most talented programmer in existence. He can do
          ;; anything. All of you babies, better shut up and listen.
          ;; Love, Christina.
+         ;; filled in later, for now we need the binding though.
          (finish-cb nil)
          ;; do some SSL wrapping, if needed
          (parsed-uri (puri:parse-uri uri))
@@ -67,14 +67,25 @@
                        (or force-ssl
                            (eq (puri:uri-scheme parsed-uri) :https))))
          (timeout read-timeout)
+         ;; grab the proxy info
+         (proxy (when proxy
+                  (if (atom proxy)
+                      (list proxy 80)
+                      proxy)))
+         (host (if proxy
+                   (car proxy)
+                   (puri:uri-host parsed-uri)))
+         (port (if proxy
+                   (cadr proxy)
+                   (or (puri:uri-port parsed-uri)
+                       (if use-ssl 443 80))))
          ;; create an http-stream we can drain data from once a response comes in
          (stream (http-request-complete-stream
-                   uri
+                   host port
                    (lambda (stream) (funcall finish-cb stream))
                    (lambda (ev)
                      (signal-error future ev))
                    :stream stream  ; if we got a stream passed in, wrap it
-                   :ssl use-ssl
                    :timeout timeout))
          ;; if using SSL, wrap the stream.
          (stream (if use-ssl

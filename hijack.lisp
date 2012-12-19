@@ -31,6 +31,11 @@
                              (error "Stream not passed into http-request-async (required).")))
                   form))
 
+    ;; make it so you can proxy even if a stream is passed in
+    (do-replace '(and proxy (null stream) (not proxying-https-p) (not real-host))
+                (lambda (form)
+                  (remove '(null stream) form :test #'equal)))
+
     ;; make sure finish-request returns a lambda when it's finished (instead of
     ;; trying to process a request that hasn't been received yet).
     (do-replace '(with-character-stream-semantics :...)
@@ -459,6 +464,7 @@ PARAMETERS will not be used."
                 ;; for every request
                 (setf (ccl:stream-deadline http-stream) deadline))
             (labels ((write-http-line (fmt &rest args)
+                       ;(apply #'format (append (list t fmt) args))
                        (when *header-stream*
                          (format *header-stream* "~?~%" fmt args))
                        (format http-stream "~?~C~C" fmt args #\Return #\Linefeed))

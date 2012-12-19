@@ -5,7 +5,7 @@ on top of [cl-async](https://github.com/orthecreedence/cl-async).
 
 *PLEASE* use the latest (git) versions of [cl-libevent2](/orthecreedence/cl-libevent2)
 and [cl-async](/orthecreedence/cl-async) to run `drakma-async`. If you use the
-quicklisp versions, at the very best SSL won't work, and at the worst nothing
+quicklisp versions, at the very best SSL won't work, and most likely nothing
 will work. At the very worst, a cascading stream of cause and effect will shift
 our temporal plane into a new hellish existence, causing a rift that constantly
 collapses in on itself slowly at first, but at an accellerating rate until it 

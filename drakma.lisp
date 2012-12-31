@@ -86,14 +86,8 @@
                    (lambda (ev)
                      (signal-error future ev))
                    :stream stream  ; if we got a stream passed in, wrap it
-                   :timeout timeout))
-         ;; if using SSL, wrap the stream.
-         (stream (if use-ssl
-                     (as-ssl:wrap-in-ssl stream
-                                         :certificate certificate
-                                         :key key
-                                         :password certificate-password)
-                     stream))
+                   :timeout timeout
+                   :ssl use-ssl))
          ;; make a drakma-specific stream.
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))
          ;; call *our* version of http-request, making sure we save the

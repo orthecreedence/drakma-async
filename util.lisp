@@ -19,7 +19,9 @@
       (let ((num-forms-processed 0))
         ;; loop over the forms for each item and do a comparison
         (loop for i from 0
-              for form1 in form
+              for form1 in (if (listp (cdr form))
+                               form
+                               (list (car form) (cdr form)))
               for form2 in wildcard-item do
           (cond ((eql form2 wildcard-marker)
                  ;; do nothing, since a wildcard will match anything (continue

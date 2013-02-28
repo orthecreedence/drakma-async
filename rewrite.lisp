@@ -1,4 +1,4 @@
-(in-package :drakma)
+(in-package :drakma-async)
 
 (defmacro rewrite-http-request (defun-form)
   "This macro automates the conversion from drakma:http-request to be
@@ -18,7 +18,7 @@
     ;; rename http-request -> http-request-async
     (do-replace '(defun http-request :...)
                 (lambda (form)
-                  (setf (cadr form) 'drakma::http-request-async)
+                  (setf (cadr form) 'http-request-async)
                   form))
 
     ;; drop all the stream processing stuff, we are ONLY allowing a stream to be
@@ -735,3 +735,4 @@ PARAMETERS will not be used."
                    (not (eq content :continuation)))
           (ignore-errors (close http-stream)))))))
 )
+

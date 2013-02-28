@@ -94,7 +94,7 @@
          ;; resulting callback (which could be a continuation callback or the
          ;; finish-cb for the request
          (req-cb (apply
-                   #'drakma::http-request-async
+                   'http-request-async
                    (append (list uri-no-ssl  ; make sure the hijacked drakma doesn't try SSL
                                  :close nil  ; we handle closing ourselves
                                  :force-ssl nil  ; we handle SSL ourselves, TYVM

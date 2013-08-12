@@ -1,5 +1,5 @@
 (defpackage :drakma-async
-  (:use :cl :flexi-streams :cl-async-future :alexandria :drakma :puri :flexi-streams :chunga)
+  (:use :cl :alexandria :flexi-streams :cl-async-future :alexandria :drakma :puri :flexi-streams :chunga)
   (:shadow http-request)
   (:shadowing-import-from :drakma
                           syntax-error)
@@ -23,10 +23,13 @@
                 read-body
 
                 dissect-query
-                all-get-parameters
 
                 drakma-simple-error
-                )
+                drakma-warn
+                
+                update-cookies
+                get-cookies
+                set-referer)
   (:nicknames :das))
 
   

@@ -5,7 +5,9 @@
   :description "An asynchronous port of the Drakma HTTP client."
   :depends-on (#-(or :drakma-no-ssl) #:cl-async-ssl
                #+(or :drakma-no-ssl) #:cl-async
-			   #:flexi-streams #:drakma)
+               #:alexandria
+               #:flexi-streams
+               #:drakma)
   :components
   ((:file "package")
    (:file "util" :depends-on ("package"))

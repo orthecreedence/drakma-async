@@ -55,31 +55,19 @@
                     (ignore-errors (close http-stream)))))
 
     ;; re-write the part that follows HTTP forwards
-
-;(return-from http-request
-;  (apply #'http-request new-uri
-;         :redirect (cond ((integerp redirect) (1- redirect))
-;                         (t redirect))
-;         :stream (and re-use-stream http-stream)
-;         :additional-headers additional-headers
-;         ;; don't send GET parameters again in redirect
-;         :parameters (and (not (eq method :get)) parameters)
-;         :preserve-uri t
-;         args))
-
     (do-replace '(return-from http-request
                    (let (:...)
                      (apply #'http-request new-uri :...)))
                 (lambda (form)
                   (declare (ignore form))
-                  '(return-from http-request
+                  '(return-from http-request-async
                      (let ((method (if (and (member status-code drakma::+redirect-to-get-codes+)
                                             (member method drakma::+redirect-to-get-methods+))
                                        :get
                                        method)))
                        (apply (if re-use-stream
-                                  #'http-request-async
-                                  #'drakma-async:http-request)
+                                  'http-request-async
+                                  'drakma-async:http-request)
                               (append
                                 (list
                                   new-uri

@@ -130,7 +130,7 @@
         (test-timeout 5)
         (multiple-future-bind (nil status)
             (das:http-request "http://www.google.com"
-                              :proxy '("165.24.10.8" 8080))
+                              :proxy '("200.192.251.129" 8081))
           (setf http-status status)))
     (is (= http-status 200))))
 
@@ -141,7 +141,7 @@
         (test-timeout 5)
         (multiple-future-bind (nil status)
             (das:http-request "http://google.com"
-                              :proxy '("165.24.10.8" 8080))
+                              :proxy '("200.192.251.129" 8081))
           (setf http-status status)))
     (is (= http-status 200))))
 

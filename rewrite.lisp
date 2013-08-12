@@ -73,8 +73,8 @@
                 (lambda (form)
                   (declare (ignore form))
                   '(return-from http-request
-                     (let ((method (if (and (member status-code +redirect-to-get-codes+)
-                                            (member method +redirect-to-get-methods+))
+                     (let ((method (if (and (member status-code drakma::+redirect-to-get-codes+)
+                                            (member method drakma::+redirect-to-get-methods+))
                                        :get
                                        method)))
                        (apply (if re-use-stream

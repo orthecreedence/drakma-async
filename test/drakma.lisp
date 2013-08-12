@@ -92,7 +92,8 @@
                                 :want-stream t)
             (setf status2 status)
             (setf socket-equal-p (equal socket1
-                                        (das::get-underlying-socket stream))))))
+                                        (das::get-underlying-socket stream)))
+            (close stream))))
     (is (= status1 200))
     (is (= status2 200))
     (is-true socket-equal-p)))

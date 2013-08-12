@@ -54,13 +54,13 @@
                     (remf args :stream)
                     (ignore-errors (close http-stream)))))
 
-    ;; re-write the part that follows HTTP forwards
+    ;; re-write the part that follows HTTP forwards/redirects
     (do-replace '(return-from http-request
                    (let (:...)
                      (apply #'http-request new-uri :...)))
                 (lambda (form)
                   (declare (ignore form))
-                  '(return-from http-request-async
+                  '(return-from http-request
                      (let ((method (if (and (member status-code drakma::+redirect-to-get-codes+)
                                             (member method drakma::+redirect-to-get-methods+))
                                        :get

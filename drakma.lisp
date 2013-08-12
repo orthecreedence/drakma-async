@@ -12,6 +12,7 @@
                               ca-file
                               ca-directory
                               parameters
+                              (url-encoder #'url-encode)
                               content
                               (content-type "application/x-www-form-urlencoded")
                               (content-length nil content-length-provided-p)
@@ -21,12 +22,11 @@
                               (user-agent :drakma)
                               (accept "*/*")
                               range
-                              proxy
+                              (proxy *default-http-proxy*)
                               proxy-basic-authorization
                               real-host
                               additional-headers
                               (redirect 5)
-                              (redirect-methods '(:get :head))
                               auto-referer
                               keep-alive
                               (close t)
@@ -36,11 +36,11 @@
                               want-stream
                               stream
                               preserve-uri
-                              ;(connection-timeout 20)
                               (read-timeout 20)
                               (write-timeout 20 write-timeout-provided-p)
                               #+:openmcl
-                              deadline)
+                              deadline
+                              &aux (unparsed-uri (if (stringp uri) (copy-seq uri) (puri:copy-uri uri))))
   "This function wraps drakma's new http-request-async function so you don't
    have to deal with the intricacies. For full documentation on this function,
    refer to the docs for drakma:http-request; this library aims to be API
@@ -94,7 +94,7 @@
          ;; resulting callback (which could be a continuation callback or the
          ;; finish-cb for the request
          (req-cb (apply
-                   #'drakma::http-request-async
+                   'http-request-async
                    (append (list uri-no-ssl  ; make sure the hijacked drakma doesn't try SSL
                                  :close nil  ; we handle closing ourselves
                                  :force-ssl nil  ; we handle SSL ourselves, TYVM

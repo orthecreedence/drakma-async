@@ -1,4 +1,4 @@
-(in-package :drakma)
+(in-package :drakma-async)
 
 (defmacro rewrite-http-request (defun-form)
   "This macro automates the conversion from drakma:http-request to be
@@ -18,7 +18,7 @@
     ;; rename http-request -> http-request-async
     (do-replace '(defun http-request :...)
                 (lambda (form)
-                  (setf (cadr form) 'drakma::http-request-async)
+                  (setf (cadr form) 'http-request-async)
                   form))
 
     ;; drop all the stream processing stuff, we are ONLY allowing a stream to be
@@ -55,25 +55,44 @@
                     (ignore-errors (close http-stream)))))
 
     ;; re-write the part that follows HTTP forwards
-    (do-replace '(return-from http-request (apply #'http-request new-uri :...))
+
+;(return-from http-request
+;  (apply #'http-request new-uri
+;         :redirect (cond ((integerp redirect) (1- redirect))
+;                         (t redirect))
+;         :stream (and re-use-stream http-stream)
+;         :additional-headers additional-headers
+;         ;; don't send GET parameters again in redirect
+;         :parameters (and (not (eq method :get)) parameters)
+;         :preserve-uri t
+;         args))
+
+    (do-replace '(return-from http-request
+                   (let (:...)
+                     (apply #'http-request new-uri :...)))
                 (lambda (form)
                   (declare (ignore form))
                   '(return-from http-request
-                     (apply (if re-use-stream
-                                #'http-request-async
-                                #'drakma-async:http-request)
-                            (append
-                              (list
-                                new-uri
-                                :redirect (cond ((integerp redirect) (1- redirect))
-                                                (t redirect))
-                                :additional-headers additional-headers
-                                ;; don't send GET parameters again in redirect
-                                :parameters (and (not (eq method :get)) parameters)
-                                :preserve-uri t)
-                              (when re-use-stream
-                                (list :stream http-stream))
-                              args)))))
+                     (let ((method (if (and (member status-code +redirect-to-get-codes+)
+                                            (member method +redirect-to-get-methods+))
+                                       :get
+                                       method)))
+                       (apply (if re-use-stream
+                                  #'http-request-async
+                                  #'drakma-async:http-request)
+                              (append
+                                (list
+                                  new-uri
+                                  :method method
+                                  :redirect (cond ((integerp redirect) (1- redirect))
+                                                  (t redirect))
+                                  :additional-headers additional-headers
+                                  ;; don't send GET parameters again in redirect
+                                  :parameters (and (not (eq method :get)) parameters)
+                                  :preserve-uri t)
+                                (when re-use-stream
+                                  (list :stream http-stream))
+                                args))))))
 
     ;; support content :continuation
     (do-replace '(when (eq content :continuation)
@@ -108,6 +127,7 @@
                               ca-file
                               ca-directory
                               parameters
+                              (url-encoder #'url-encode)
                               content
                               (content-type "application/x-www-form-urlencoded")
                               (content-length nil content-length-provided-p)
@@ -117,12 +137,11 @@
                               (user-agent :drakma)
                               (accept "*/*")
                               range
-                              proxy
+                              (proxy *default-http-proxy*)
                               proxy-basic-authorization
                               real-host
                               additional-headers
                               (redirect 5)
-                              (redirect-methods '(:get :head))
                               auto-referer
                               keep-alive
                               (close t)
@@ -140,7 +159,7 @@
                               #+:openmcl
                               deadline
                               &aux (unparsed-uri (if (stringp uri) (copy-seq uri) (puri:copy-uri uri))))
-  "Sends an HTTP request to a web server and returns its reply.  URI
+  "Sends a HTTP request to a web server and returns its reply.  URI
 is where the request is sent to, and it is either a string denoting a
 uniform resource identifier or a PURI:URI object.  The scheme of URI
 must be `http' or `https'.  The function returns SEVEN values - the
@@ -158,7 +177,7 @@ PROTOCOL is the HTTP protocol which is going to be used in the
 request line, it must be one of the keywords :HTTP/1.0 or
 :HTTP/1.1.  METHOD is the method used in the request line, a
 keyword \(like :GET or :HEAD) denoting a valid HTTP/1.1 or WebDAV
-request method, or :REPORT, as described in the Versioning 
+request method, or :REPORT, as described in the Versioning
 Extensions to WebDAV.  Additionally, you can also use the pseudo
 method :OPTIONS* which is like :OPTIONS but means that an
 \"OPTIONS *\" request line will be sent, i.e. the URI's path and
@@ -210,6 +229,12 @@ treated as a plist which can be used to specify a content type and/or
 a filename for the file, i.e. such a value could look like, e.g.,
 \(#p\"/tmp/my_file.doc\" :content-type \"application/msword\"
 :filename \"upload.doc\").
+
+URL-ENCODER specifies a custom URL encoder function which will be used
+by drakma to URL-encode parameter names and values.  It needs to be a
+function of one argument.  The argument is the string to encode, the
+return value must be the URL-encoded string.  This can be used if
+specific encoding rules are required.
 
 CONTENT, if not NIL, is used as the request body - PARAMETERS is
 ignored in this case.  CONTENT can be a string, a sequence of
@@ -282,7 +307,8 @@ If PROXY is not NIL, it should be a string denoting a proxy
 server through which the request should be sent.  Or it can be a
 list of two values - a string denoting the proxy server and an
 integer denoting the port to use \(which will default to 80
-otherwise).  PROXY-BASIC-AUTHORIZATION is used like
+otherwise).  Defaults to *default-http-proxy*. 
+PROXY-BASIC-AUTHORIZATION is used like
 BASIC-AUTHORIZATION, but for the proxy, and only if PROXY is
 true.
 
@@ -375,7 +401,7 @@ PARAMETERS will not be used."
   (when (and close keep-alive)
     (parameter-error "CLOSE and KEEP-ALIVE must not be both true."))
   (when (and form-data (not (member method '(:post :report) :test #'eq)))
-    (parameter-error "FORM-DATA makes only sense with POST requests."))
+    (parameter-error "FORM-DATA only makes sense with POST requests."))
   (when range
     (unless (and (listp range)
                  (integerp (first range))
@@ -412,7 +438,7 @@ PARAMETERS will not be used."
                (unless (or file-parameters-p content-length-provided-p)
                  (setq content-length (or content-length t))))
               (t
-               (setq content (alist-to-url-encoded-string parameters external-format-out)
+               (setq content (alist-to-url-encoded-string parameters external-format-out url-encoder)
                      content-type "application/x-www-form-urlencoded")))))
     (let ((proxying-https-p (and proxy (not stream) (eq :https (puri:uri-scheme uri))))
            http-stream raw-http-stream must-close done)
@@ -464,7 +490,6 @@ PARAMETERS will not be used."
                 ;; for every request
                 (setf (ccl:stream-deadline http-stream) deadline))
             (labels ((write-http-line (fmt &rest args)
-                       ;(apply #'format (append (list t fmt) args))
                        (when *header-stream*
                          (format *header-stream* "~?~%" fmt args))
                        (format http-stream "~?~C~C" fmt args #\Return #\Linefeed))
@@ -517,7 +542,7 @@ PARAMETERS will not be used."
                               (append (dissect-query (uri-query uri))
                                       (and (not parameters-used-p) parameters))))
                 (setf (uri-query uri)
-                      (alist-to-url-encoded-string all-get-parameters external-format-out)))
+                      (alist-to-url-encoded-string all-get-parameters external-format-out url-encoder)))
               (when (eq method :options*)
                 ;; special pseudo-method
                 (setf method :options
@@ -610,7 +635,7 @@ PARAMETERS will not be used."
               (force-output http-stream)
               (when (and content (null content-length))
                 (setf (chunked-stream-output-chunking-p
-                       (flexi-stream-stream http-stream)) t))         
+                       (flexi-stream-stream http-stream)) t))
               (labels ((finish-request (content &optional continuep)
                          (send-content content http-stream external-format-out)
                          (when continuep
@@ -644,7 +669,7 @@ PARAMETERS will not be used."
                                  (update-cookies (get-cookies headers uri) cookie-jar))
                                (when (and redirect
                                           (member status-code +redirect-codes+)
-                                          (member method redirect-methods))
+                                          (header-value :location headers))
                                  (unless (or (eq redirect t)
                                              (and (integerp redirect)
                                                   (plusp redirect)))
@@ -656,14 +681,7 @@ PARAMETERS will not be used."
                                  (when auto-referer
                                    (setq additional-headers (set-referer uri additional-headers)))
                                  (let* ((location (header-value :location headers))
-                                        (new-uri (merge-uris
-                                                  (cond ((or (null location)
-                                                             (zerop (length location)))
-                                                         (drakma-warn
-                                                          "Empty `Location' header, assuming \"/\".")
-                                                         "/")
-                                                        (t location))
-                                                  uri))
+                                        (new-uri (merge-uris location uri))
                                         ;; can we re-use the stream?
                                         (old-server-p (and (string= (uri-host new-uri)
                                                                     (uri-host uri))
@@ -685,15 +703,22 @@ PARAMETERS will not be used."
                                        (ignore-errors (close http-stream)))
                                      (setq done t)
                                      (return-from http-request
-                                       (apply #'http-request new-uri
-                                              :redirect (cond ((integerp redirect) (1- redirect))
-                                                              (t redirect))
-                                              :stream (and re-use-stream http-stream)
-                                              :additional-headers additional-headers
-                                              ;; don't send GET parameters again in redirect
-                                              :parameters (and (not (eq method :get)) parameters)
-                                              :preserve-uri t
-                                              args)))))
+                                       (let ((method (if (and (member status-code +redirect-to-get-codes+)
+                                                              (member method +redirect-to-get-methods+))
+                                                         :get
+                                                         method)))
+                                         (apply #'http-request new-uri
+                                                :method method
+                                                :redirect (cond ((integerp redirect) (1- redirect))
+                                                                (t redirect))
+                                                :stream (and re-use-stream http-stream)
+                                                :additional-headers additional-headers
+                                                :parameters parameters
+                                                :preserve-uri t
+                                                :form-data (if (eq method :get)
+                                                               nil
+                                                               form-data)
+                                                args))))))
                                (let ((transfer-encodings (header-value :transfer-encoding headers)))
                                  (when transfer-encodings
                                    (setq transfer-encodings (split-tokens transfer-encodings)))
@@ -735,3 +760,4 @@ PARAMETERS will not be used."
                    (not (eq content :continuation)))
           (ignore-errors (close http-stream)))))))
 )
+

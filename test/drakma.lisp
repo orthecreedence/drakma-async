@@ -1,5 +1,5 @@
 (defpackage :drakma-async-test
-  (:use :cl :eos :drakma-async :cl-async-future)
+  (:use :cl :eos :cl-async-base :cl-async-util :drakma-async :cl-async-future)
   (:export #:run-tests))
 (in-package :drakma-async-test)
 
@@ -17,19 +17,22 @@
   "Make sure a test times out after the given num seconds. An event loop can't
    do this itself without skewing results. Uses event base IDs to make sure it
    doesn't cancel an event loop that test-timeout wasn't called inside of."
-  (let ((event-base cl-async-util::*event-base*)
-        (base-id cl-async-util::*event-base-id*))
-    (as::enable-threading-support)
+  (let ((event-base (event-base-c *event-base*))
+        (base-id (event-base-id *event-base*)))
     (let ((cancel nil))
       ;; if the event loop exits naturally, cancel the break
       (as:add-event-loop-exit-callback
         (lambda () (setf cancel t)))
       ;; spawn the thread to kill the event loop
-      (bt:make-thread (lambda ()
-                        (sleep seconds)
-                        (when (and (eql cl-async-util::*event-base-id* base-id)
-                                   (not cancel))
-                          (le:event-base-loopexit event-base (cffi:null-pointer))))))))
+      (handler-case
+        (bt:make-thread (lambda ()
+                         (sleep seconds)
+                         (when (and *event-base*
+                                    (eql (event-base-id *event-base*) base-id)
+                                    (not cancel))
+                           (le:event-base-loopexit event-base (cffi:null-pointer)))))
+        (bt::bordeaux-mp-condition ()
+          nil)))))
 
 (def-suite drakma-async-test :description "cl-async test suite")
 (in-suite drakma-async-test)
@@ -127,7 +130,7 @@
         (test-timeout 5)
         (multiple-future-bind (nil status)
             (das:http-request "http://www.google.com"
-                              :proxy '("72.64.146.135" 8080))
+                              :proxy '("108.178.2.70" 7080))
           (setf http-status status)))
     (is (= http-status 200))))
 
@@ -138,7 +141,7 @@
         (test-timeout 5)
         (multiple-future-bind (nil status)
             (das:http-request "http://google.com"
-                              :proxy '("72.64.146.135" 8080))
+                              :proxy '("108.178.2.70" 7080))
           (setf http-status status)))
     (is (= http-status 200))))
 

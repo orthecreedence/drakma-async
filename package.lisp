@@ -17,6 +17,8 @@
                 non-default-port
                 user-agent-string
 
+                alist-to-url-encoded-string
+
                 send-content
 
                 read-status-line

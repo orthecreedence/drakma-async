@@ -248,7 +248,8 @@
                                                              :msg "HTTP stream client timed out.")))
                           (t ()
                             (funcall event-cb ev))))))
-        (if existing-socket
+        (if (and existing-socket
+                 (not (as:socket-closed-p existing-socket)))
             ;; we have an existing socket, rewrite its callbacks
             (progn
               (as:write-socket-data existing-socket nil

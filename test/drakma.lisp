@@ -83,13 +83,15 @@
         (test-timeout 4)
         (multiple-future-bind (stream status)
             (das:http-request "http://www.google.com/"
-                              :want-stream t)
+                              :want-stream t
+                              :close nil)
           (setf status1 status
                 socket1 (das::get-underlying-socket stream))
           (multiple-future-bind (stream status)
               (das:http-request "http://www.google.com/"
                                 :stream stream
-                                :want-stream t)
+                                :want-stream t
+                                :close nil)
             (setf status2 status)
             (setf socket-equal-p (equal socket1
                                         (das::get-underlying-socket stream)))

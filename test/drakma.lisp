@@ -74,7 +74,7 @@
 
 (test want-stream
   "Makes sure :want-stream returns a stream that can be operated on again, and
-   also makes sure that :want-stream keeps the stream open"
+   also makes sure that :want-stream keeps the stream open."
   (multiple-value-bind (status1 status2 socket-equal-p)
       (async-let ((status1 nil)
                   (status2 nil)
@@ -82,13 +82,13 @@
                   (socket1 nil))
         (test-timeout 4)
         (multiple-future-bind (stream status)
-            (das:http-request "http://www.google.com/"
+            (das:http-request "http://www.google.com.ua/"
                               :want-stream t
                               :close nil)
           (setf status1 status
                 socket1 (das::get-underlying-socket stream))
           (multiple-future-bind (stream status)
-              (das:http-request "http://www.google.com/"
+              (das:http-request "http://www.google.com.ua/"
                                 :stream stream
                                 :want-stream t
                                 :close nil)

@@ -6,9 +6,13 @@
 
 (in-package :drakma-async)
 
-(define-condition http-eof (as:http-error) ()
+(define-condition http-eof (as:event-error) ()
   (:report (lambda (c s) (format s "HTTP connection EOF: ~a: ~a" (as:event-errcode c) (as:event-errmsg c))))
-  (:documentation "Passed to an event callback when an HTTP peer closes the connection."))
+  (:documentation "Triggered when an HTTP peer closes the connection."))
+
+(define-condition http-timeout (as:event-error) ()
+  (:report (lambda (c s) (format s "HTTP connection timeout: ~a: ~a" (as:event-errcode c) (as:event-errmsg c))))
+  (:documentation "Triggered when an HTTP connection times out."))
 
 (defparameter *scanner-header-parse-line*
   (cl-ppcre:create-scanner "\\r\\n" :multi-line-mode t)
@@ -243,7 +247,7 @@
                                                              :code -1
                                                              :msg "HTTP stream client peer closed connection.")))
                           (as:tcp-timeout ()
-                            (funcall event-cb (make-instance 'as:http-timeout
+                            (funcall event-cb (make-instance 'http-timeout
                                                              :code -1
                                                              :msg "HTTP stream client timed out.")))
                           (t ()

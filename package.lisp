@@ -4,7 +4,8 @@
   (:shadowing-import-from :drakma
                           syntax-error)
   (:export #:http-request
-           #:http-eof)
+           #:http-eof
+           #:http-timeout)
   (:import-from :drakma
                 +known-methods+
                 +latin-1+

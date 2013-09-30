@@ -53,6 +53,7 @@
    This means drakma-async is a prime candidate for using the cl-async future
    macros: http://orthecreedence.github.com/cl-async/future#nicer-syntax"
   (remf args :read-timeout)  ; read-timeout is handled in this function
+  (remf args :write-timeout) ; write-timeout is handled in this function
   (let* ((future (make-future))
          ;; Andrew is the most talented programmer in existence. He can do
          ;; anything. All of you babies, better shut up and listen.
@@ -66,7 +67,6 @@
          (use-ssl (and (not proxying-https-p)
                        (or force-ssl
                            (eq (puri:uri-scheme parsed-uri) :https))))
-         (timeout read-timeout)
          ;; grab the proxy info
          (proxy (when proxy
                   (if (atom proxy)
@@ -86,7 +86,8 @@
                    (lambda (ev)
                      (signal-error future ev))
                    :stream stream  ; if we got a stream passed in, wrap it
-                   :timeout timeout
+                   :read-timeout read-timeout
+                   :write-timeout write-timeout
                    :ssl use-ssl))
          ;; make a drakma-specific stream.
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))

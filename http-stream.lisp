@@ -197,7 +197,7 @@
     
 (defparameter *stream-buffer* (make-array 8096 :element-type '(unsigned-byte 8)))
 
-(defun http-request-complete-stream (host port request-cb event-cb &key ssl stream timeout)
+(defun http-request-complete-stream (host port request-cb event-cb &key ssl stream read-timeout write-timeout)
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
@@ -267,6 +267,7 @@
                    (list 
                      host port
                      read-cb event-cb
-                     :read-timeout timeout
+                     :read-timeout read-timeout
+                     :write-timeout write-timeout
                      :stream t)))))))
 

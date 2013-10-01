@@ -106,23 +106,25 @@
     ;; overwrite the socket's read callback to handle req-cb and finish the
     ;; future with the computed values.
     (setf finish-cb (lambda (stream)
-                      (let ((http-values (multiple-value-list
-                                           (funcall (if (equal req-cb continue-cb)
-                                                        ;; get the REAL req-cb
-                                                        (funcall continue-cb nil)
-                                                        ;; have a req-cb, call it
-                                                        req-cb)))))
-                        ;; if we got a function back, it means we redirected and
-                        ;; the original stream was reused, meaning the callbacks
-                        ;; will still function fine. take no action. otherwise,
-                        ;; either finish the future, or if another future is
-                        ;; returned, rebind the original future's callbacks to
-                        ;; the new one.
-                        (unless (functionp (car http-values))
-                          (when (and close (not want-stream))
-                            (unless (as:socket-closed-p (as:stream-socket stream))
-                              (close stream)))
-                          (apply #'finish (append (list future) http-values))))))
+                      (future-handler-case
+                        (let ((http-values (multiple-value-list
+                                             (funcall (if (equal req-cb continue-cb)
+                                                          ;; get the REAL req-cb
+                                                          (funcall continue-cb nil)
+                                                          ;; have a req-cb, call it
+                                                          req-cb)))))
+                          ;; if we got a function back, it means we redirected and
+                          ;; the original stream was reused, meaning the callbacks
+                          ;; will still function fine. take no action. otherwise,
+                          ;; either finish the future, or if another future is
+                          ;; returned, rebind the original future's callbacks to
+                          ;; the new one.
+                          (unless (functionp (car http-values))
+                            (when (and close (not want-stream))
+                              (unless (as:socket-closed-p (as:stream-socket stream))
+                                (close stream)))
+                            (apply #'finish (append (list future) http-values))))
+                        (t (e) (signal-error future e)))))
     ;; let the app attach callbacks to the future
     (if (eq content :continuation)
         ;; return a wrapper that calls the continuation function

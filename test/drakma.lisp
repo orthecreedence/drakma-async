@@ -3,6 +3,11 @@
   (:export #:run-tests))
 (in-package :drakma-async-test)
 
+(defparameter *proxy* (list "204.93.54.15" 3127)
+  "One defparameter to rule them all.
+   One defparameter to bind them.
+   One defparameter to bring them all and in the darkness bind them.")
+
 (defmacro async-let ((&rest bindings) &body body)
   "Wrap an async op inside of a let/start-event-loop block to mimick a blocking
    action. Bindings must be set from withing the block via setf."
@@ -133,7 +138,7 @@
         (test-timeout 5)
         (multiple-future-bind (nil status)
             (das:http-request "http://www.google.com"
-                              :proxy '("108.178.2.70" 7080))
+                              :proxy *proxy*)
           (setf http-status status)))
     (is (= http-status 200))))
 
@@ -144,7 +149,7 @@
         (test-timeout 5)
         (multiple-future-bind (nil status)
             (das:http-request "http://google.com"
-                              :proxy '("108.178.2.70" 7080))
+                              :proxy *proxy*)
           (setf http-status status)))
     (is (= http-status 200))))
 

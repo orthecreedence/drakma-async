@@ -90,7 +90,7 @@
                    :write-timeout write-timeout
                    :ssl use-ssl))
          ;; make a drakma-specific stream.
-         (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format :latin-1))
+         (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format external-format-in))
          ;; call *our* version of http-request, making sure we save the
          ;; resulting callback (which could be a continuation callback or the
          ;; finish-cb for the request

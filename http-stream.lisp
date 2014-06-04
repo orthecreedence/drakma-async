@@ -14,19 +14,6 @@
   (:report (lambda (c s) (format s "HTTP connection timeout: ~a: ~a" (as:event-errcode c) (as:event-errmsg c))))
   (:documentation "Triggered when an HTTP connection times out."))
 
-(defparameter *scanner-header-parse-line*
-  (cl-ppcre:create-scanner "\\r\\n" :multi-line-mode t)
-  "Create a regex scanner for splitting header lines up.")
-(defparameter *scanner-header-parse-kv*
-  (cl-ppcre:create-scanner ":[ \s]+" :multi-line-mode t)
-  "Create a regex scanner for splitting header kv pairs up.")
-(defparameter *scanner-numeric*
-  (cl-ppcre:create-scanner "^[0-9\.]+$")
-  "Create a regex scanner that detects if a string can be converted to a numver.")
-(defparameter *scanner-status-not-100-continue*
-  (cl-ppcre:create-scanner "^HTTP/[0-9\\.]+ (?!(100 Continue))" :case-insensitive-mode t)
-  "Create a scanner to determine if a response line is a status line.")
-
 (defun get-underlying-socket (stream)
   "Given a stream (of type flexi, chunga, or async-stream), grab the underlying
    socket (or return nil)."
@@ -44,29 +31,41 @@
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
-  (let ((http-stream nil)
-        (http-sock nil)
-        (http (make-instance 'http-parse:http-response))
-        (http-bytes (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
-    (flet ((finish-request ()
-             (let ((evbuf (le:bufferevent-get-input (as::socket-c http-sock)))
-                   (remaining-buffer-data nil))
-               ;; if the evbuffer has a length > 0, grab any data left on it
-               (unless (eq (le:evbuffer-get-length evbuf) 0)
-                 (setf remaining-buffer-data (as::drain-evbuffer evbuf)))
-               ;; write the response + any extra data back into the evbuffer
-               (le:evbuffer-unfreeze evbuf 0)  ; input buffers by default disable writing
-               (as::write-to-evbuffer evbuf (flexi-streams:get-output-stream-sequence http-bytes))
-               (le:evbuffer-freeze evbuf 0)  ; re-enable write freeze
-               (when remaining-buffer-data
-                 ;; write existing data back onto end of evbuffer
-                 (as::write-to-evbuffer evbuf remaining-buffer-data)))
-             ;; send the finalized stream to the request-cb
-             (funcall request-cb http-stream)))
-      (let* ((parser (http-parse:make-parser http
-                                             :finish-callback #'finish-request
-                                             :store-body t))
-             (existing-socket (get-underlying-socket stream))
+  (let* ((http-stream nil)
+         (http-sock nil)
+         (http nil)
+         (http-bytes (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8)))
+         (parser nil)
+         (make-parser nil))
+        
+    (labels ((finish-request ()
+               (let ((evbuf (le:bufferevent-get-input (as::socket-c http-sock)))
+                     (remaining-buffer-data nil))
+                 ;; if the evbuffer has a length > 0, grab any data left on it
+                 (unless (eq (le:evbuffer-get-length evbuf) 0)
+                   (setf remaining-buffer-data (as::drain-evbuffer evbuf)))
+                 ;; write the response + any extra data back into the evbuffer
+                 (le:evbuffer-unfreeze evbuf 0)  ; input buffers by default disable writing
+                 (as::write-to-evbuffer evbuf (flexi-streams:get-output-stream-sequence http-bytes))
+                 (when remaining-buffer-data
+                   ;; write existing data back onto end of evbuffer
+                   (as::write-to-evbuffer evbuf remaining-buffer-data))
+                 (le:evbuffer-freeze evbuf 0)  ; re-enable write freeze
+                 ;; send the finalized stream to the request-cb
+                 (funcall request-cb http-stream)
+                 ;; parsing should be done now (it's synchronous), so clear the
+                 ;; evbuffer out in case we got a redirect and are re-using the
+                 ;; stream
+                 (le:evbuffer-drain evbuf 65536)
+                 ;; reset the parser (in case we get a redirect on the same stream)
+                 (funcall make-parser))))
+      (setf make-parser (lambda ()
+                          (setf http (make-instance 'http-parse:http-response))
+                          (setf parser (http-parse:make-parser http
+                                                               :finish-callback #'finish-request
+                                                               :store-body t))))
+      (funcall make-parser)
+      (let* ((existing-socket (get-underlying-socket stream))
              (buffer (make-array 8096 :element-type '(unsigned-byte 8)))
              (read-cb (lambda (sock stream)
                         ;; store the http-stream so the other functions can access it

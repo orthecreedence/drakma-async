@@ -93,7 +93,7 @@
          (http-stream (make-flexi-stream (chunga:make-chunked-stream stream) :external-format external-format-in))
          ;; call *our* version of http-request, making sure we save the
          ;; resulting callback (which could be a continuation callback or the
-         ;; finish-cb for the request
+         ;; finish-cb for the request)
          (req-cb (apply
                    'http-request-async
                    (append (list uri-no-ssl  ; make sure the hijacked drakma doesn't try SSL
@@ -119,11 +119,13 @@
                           ;; either finish the future, or if another future is
                           ;; returned, rebind the original future's callbacks to
                           ;; the new one.
-                          (unless (functionp (car http-values))
-                            (when (and close (not want-stream))
-                              (unless (as:socket-closed-p (as:stream-socket stream))
-                                (close stream)))
-                            (apply #'finish (append (list future) http-values))))
+                          (cond ((functionp (car http-values))
+                                 (setf req-cb (car http-values)))
+                                (t
+                                 (when (and close (not want-stream))
+                                   (unless (as:socket-closed-p (as:stream-socket stream))
+                                     (close stream)))
+                                 (apply #'finish (append (list future) http-values)))))
                         (t (e) (signal-error future e)))))
     ;; let the app attach callbacks to the future
     (if (eq content :continuation)

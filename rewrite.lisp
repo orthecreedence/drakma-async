@@ -11,7 +11,7 @@
    automate it. Now I can copy and paste http-request from any drakma version
    into a (rewrite-http-request ...) macro and all is well in async land."
   (macrolet ((do-replace (form fn)
-               `(let ((replacement (drakma-async::tree-search-replace defun-form ,form ,fn)))
+               `(let ((replacement (tree-search-replace defun-form ,form ,fn)))
                   (if replacement
                       (setf defun-form replacement)
                       (format t "rewrite-http-request: form not found: ~s~%" ,form)))))

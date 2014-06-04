@@ -38,27 +38,27 @@
          (parser nil)
          (make-parser nil))
         
-    (labels ((finish-request ()
-               (let ((evbuf (le:bufferevent-get-input (as::socket-c http-sock)))
-                     (remaining-buffer-data nil))
-                 ;; if the evbuffer has a length > 0, grab any data left on it
-                 (unless (eq (le:evbuffer-get-length evbuf) 0)
-                   (setf remaining-buffer-data (as::drain-evbuffer evbuf)))
-                 ;; write the response + any extra data back into the evbuffer
-                 (le:evbuffer-unfreeze evbuf 0)  ; input buffers by default disable writing
-                 (as::write-to-evbuffer evbuf (flexi-streams:get-output-stream-sequence http-bytes))
-                 (when remaining-buffer-data
-                   ;; write existing data back onto end of evbuffer
-                   (as::write-to-evbuffer evbuf remaining-buffer-data))
-                 (le:evbuffer-freeze evbuf 0)  ; re-enable write freeze
-                 ;; send the finalized stream to the request-cb
-                 (funcall request-cb http-stream)
-                 ;; parsing should be done now (it's synchronous), so clear the
-                 ;; evbuffer out in case we got a redirect and are re-using the
-                 ;; stream
-                 (le:evbuffer-drain evbuf 65536)
-                 ;; reset the parser (in case we get a redirect on the same stream)
-                 (funcall make-parser))))
+    (flet ((finish-request ()
+             (let ((evbuf (le:bufferevent-get-input (as::socket-c http-sock)))
+                   (remaining-buffer-data nil))
+               ;; if the evbuffer has a length > 0, grab any data left on it
+               (unless (eq (le:evbuffer-get-length evbuf) 0)
+                 (setf remaining-buffer-data (as::drain-evbuffer evbuf)))
+               ;; write the response + any extra data back into the evbuffer
+               (le:evbuffer-unfreeze evbuf 0)  ; input buffers by default disable writing
+               (as::write-to-evbuffer evbuf (flexi-streams:get-output-stream-sequence http-bytes))
+               (when remaining-buffer-data
+                 ;; write existing data back onto end of evbuffer
+                 (as::write-to-evbuffer evbuf remaining-buffer-data))
+               (le:evbuffer-freeze evbuf 0)  ; re-enable write freeze
+               ;; send the finalized stream to the request-cb
+               (funcall request-cb http-stream)
+               ;; parsing should be done now (it's synchronous), so clear the
+               ;; evbuffer out in case we got a redirect and are re-using the
+               ;; stream
+               (le:evbuffer-drain evbuf 65536)
+               ;; reset the parser (in case we get a redirect on the same stream)
+               (funcall make-parser))))
       (setf make-parser (lambda ()
                           (setf http (make-instance 'http-parse:http-response))
                           (setf parser (http-parse:make-parser http

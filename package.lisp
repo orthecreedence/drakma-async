@@ -31,8 +31,8 @@
                 drakma-warn
                 
                 update-cookies
+                send-cookie-p
                 get-cookies
                 set-referer)
   (:nicknames :das))
 
-  

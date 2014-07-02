@@ -20,6 +20,9 @@
 
                 alist-to-url-encoded-string
 
+                make-random-string
+                make-form-data-function
+
                 send-content
 
                 read-status-line

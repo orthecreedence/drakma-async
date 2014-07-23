@@ -55,11 +55,11 @@
     ;; forwarding.
     (do-replace '(unless re-use-stream (ignore-errors (close http-stream)))
                 (lambda (form)
-                  (declare (ignore form))
-                 '(unless re-use-stream
-                    (remf args :close)
-                    (remf args :stream)
-                    (ignore-errors (close http-stream)))))
+                 ;'(unless re-use-stream
+                 ;   (remf args :close)
+                 ;   (remf args :stream)
+                 ;   (ignore-errors (close http-stream)))
+                 `(progn (setf re-use-stream nil) ,form)))
 
     ;; re-write the part that follows HTTP forwards/redirects
     (do-replace '(return-from http-request

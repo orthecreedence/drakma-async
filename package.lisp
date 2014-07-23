@@ -10,6 +10,8 @@
                 +known-methods+
                 +latin-1+
                 +redirect-codes+
+                +redirect-to-get-codes+
+                +redirect-to-get-methods+
 
                 *drakma-default-external-format*
                 *header-stream*
@@ -22,6 +24,7 @@
 
                 make-random-string
                 make-form-data-function
+                make-ssl-stream
 
                 send-content
 
@@ -29,6 +32,7 @@
                 read-body
 
                 dissect-query
+                trivial-uri-path
 
                 drakma-simple-error
                 drakma-warn

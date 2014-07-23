@@ -60,7 +60,6 @@
          ;; Love, Christina.
          ;; filled in later, for now we need the binding though.
          (finish-cb nil)
-         ;; do some SSL wrapping, if needed
          (parsed-uri (puri:parse-uri uri))
          (proxying-https-p (and proxy (not stream) (eq :https (puri:uri-scheme parsed-uri))))
          (use-ssl (and (not proxying-https-p)

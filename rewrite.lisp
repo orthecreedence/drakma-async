@@ -36,6 +36,13 @@
                 (lambda (form)
                   (remove '(null stream) form :test #'equal)))
 
+    ;; disable SSL within drakma (this is handled by drakma-async/cl-async)
+    (do-replace '(use-ssl (and (not proxying-https-p)
+                               (or force-ssl
+                                   (eq (puri:uri-scheme uri) :https))))
+                (lambda (form)
+                  '(use-ssl nil)))
+
     ;; make sure finish-request returns a lambda when it's finished (instead of
     ;; trying to process a request that hasn't been received yet).
     (do-replace '(with-character-stream-semantics :...)

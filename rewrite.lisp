@@ -742,7 +742,7 @@ PARAMETERS will not be used."
                                (unless (or want-stream (eq method :head))
                                  (let (trailers)
                                    (multiple-value-setq (body trailers)
-                                       (read-body http-stream headers must-close external-format-body))
+                                       (read-body http-stream headers external-format-body))
                                    (when trailers
                                      (drakma-warn "Adding trailers from chunked encoding to HTTP headers.")
                                      (setq headers (nconc headers trailers)))))

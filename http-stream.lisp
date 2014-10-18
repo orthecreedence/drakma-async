@@ -60,7 +60,7 @@
                ;; reset the parser (in case we get a redirect on the same stream)
                (funcall make-parser))))
       (setf make-parser (lambda ()
-                          (setf http (make-instance 'http-parse:http-response))
+                          (setf http (make-instance 'http-parse:http-response :force-stream t))
                           (setf parser (http-parse:make-parser http
                                                                :finish-callback #'finish-request
                                                                :store-body t))))

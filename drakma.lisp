@@ -25,6 +25,7 @@
                               (proxy *default-http-proxy*)
                               proxy-basic-authorization
                               real-host
+                              vhost
                               additional-headers
                               (redirect 5)
                               auto-referer

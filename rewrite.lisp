@@ -136,6 +136,7 @@
                               (no-proxy-domains *no-proxy-domains*)
                               proxy-basic-authorization
                               real-host
+                              vhost
                               additional-headers
                               (redirect 5)
                               auto-referer
@@ -532,7 +533,7 @@ PARAMETERS will not be used."
                 (write-http-line "CONNECT ~A:~:[443~;~:*~A~] HTTP/1.1"
                                  (puri:uri-host uri) (puri:uri-port uri))
                 (write-http-line "Host: ~A:~:[443~;~:*~A~]"
-                                 (puri:uri-host uri) (puri:uri-port uri))
+                                 (or vhost (puri:uri-host uri)) (puri:uri-port uri))
                 (write-http-line "")
                 (force-output http-stream)
                 ;; check we get a 200 response before proceeding
@@ -571,7 +572,7 @@ PARAMETERS will not be used."
                                                                        :query (puri:uri-query uri)))
                                                     nil))
                                (string-upcase protocol))
-              (write-header "Host" "~A~@[:~A~]" (puri:uri-host uri) (non-default-port uri))
+              (write-header "Host" "~A~@[:~A~]" (or vhost (puri:uri-host uri)) (non-default-port uri))
               (when user-agent
                 (write-header "User-Agent" "~A" (user-agent-string user-agent)))
               (when basic-authorization

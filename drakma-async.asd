@@ -7,7 +7,8 @@
                #+(or :drakma-no-ssl) #:cl-async
                #:alexandria
                #:flexi-streams
-               #:http-parse
+               #:fast-http
+               #:fast-io
                #:drakma)
   :components
   ((:file "package")

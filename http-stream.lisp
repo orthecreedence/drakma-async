@@ -34,11 +34,11 @@
   (let* ((http-stream nil)
          (http-sock nil)
          (http nil)
-         (http-bytes (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8)))
+         (http-bytes (fast-io:make-output-buffer))
          (parser nil)
          (make-parser nil))
-        
     (flet ((finish-request ()
+             
              (let ((evbuf (le:bufferevent-get-input (as::socket-c http-sock)))
                    (remaining-buffer-data nil))
                ;; if the evbuffer has a length > 0, grab any data left on it
@@ -46,7 +46,7 @@
                  (setf remaining-buffer-data (as::drain-evbuffer evbuf)))
                ;; write the response + any extra data back into the evbuffer
                (le:evbuffer-unfreeze evbuf 0)  ; input buffers by default disable writing
-               (as::write-to-evbuffer evbuf (flexi-streams:get-output-stream-sequence http-bytes))
+               (as::write-to-evbuffer evbuf (fast-io:finish-output-buffer http-bytes))
                (when remaining-buffer-data
                  ;; write existing data back onto end of evbuffer
                  (as::write-to-evbuffer evbuf remaining-buffer-data))
@@ -60,22 +60,20 @@
                ;; reset the parser (in case we get a redirect on the same stream)
                (funcall make-parser))))
       (setf make-parser (lambda ()
-                          (setf http (make-instance 'http-parse:http-response :force-stream t))
-                          (setf parser (http-parse:make-parser http
-                                                               :finish-callback #'finish-request
-                                                               :store-body t))))
+                          (setf http (fast-http:make-http-response))
+                          (setf parser (fast-http:make-parser http
+                                                              :finish-callback #'finish-request))))
       (funcall make-parser)
       (let* ((existing-socket (get-underlying-socket stream))
-             (buffer (make-array 8096 :element-type '(unsigned-byte 8)))
+             (buffer (make-array 65536 :element-type '(unsigned-byte 8)))
              (read-cb (lambda (sock stream)
                         ;; store the http-stream so the other functions can access it
                         (unless http-stream (setf http-stream stream))
                         (unless http-sock (setf http-sock sock))
                         (loop for num-bytes = (read-sequence buffer http-stream :end 8096)
                               while (< 0 num-bytes) do
-                          (let ((data-bytes (subseq buffer 0 num-bytes)))
-                            (write-sequence data-bytes http-bytes)
-                            (funcall parser data-bytes)))))
+                          (fast-io:fast-write-sequence buffer http-bytes 0 num-bytes)
+                          (funcall parser buffer :start 0 :end num-bytes))))
              (event-cb (lambda (ev)
                          (handler-case (error ev)
                            (as:tcp-eof ()

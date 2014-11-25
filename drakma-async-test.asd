@@ -3,7 +3,7 @@
   :license "MIT"
   :version "0.1"
   :description "TESTS FOR An asynchronous port of the Drakma HTTP client."
-  :depends-on (#:cffi #:drakma-async #:eos #:bordeaux-threads)
+  :depends-on (#:cffi #:drakma-async #:eos #:bordeaux-threads #:cl-async-future)
   :components
   ((:module test
 	:components ((:file "drakma")

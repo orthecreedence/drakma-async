@@ -5,6 +5,7 @@
   :description "An asynchronous port of the Drakma HTTP client."
   :depends-on (#-(or :drakma-no-ssl) #:cl-async-ssl
                #+(or :drakma-no-ssl) #:cl-async
+               #:cl-async-future
                #:alexandria
                #:flexi-streams
                #:fast-http

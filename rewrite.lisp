@@ -84,6 +84,8 @@
                                   :additional-headers additional-headers
                                   ;; don't send GET parameters again in redirect
                                   :parameters (and (not (eq method :get)) parameters)
+                                  ;; don't send form-data from a POST redirect to a GET
+                                  :form-data (and (not (eq method :get)) form-data)
                                   :preserve-uri t)
                                 (when re-use-stream
                                   (list :stream http-stream))

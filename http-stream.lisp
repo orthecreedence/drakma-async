@@ -31,49 +31,28 @@
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
-  (let* ((http-stream nil)
-         (http-sock nil)
+  (let* ((http-sock nil)
+         (http-stream nil)
          (http nil)
-         (http-bytes (fast-io:make-output-buffer))
+         (http-bytes (cl-async-util:make-buffer))
          (parser nil)
          (make-parser nil))
     (flet ((finish-request ()
-             
-             (let ((evbuf (le:bufferevent-get-input (as::socket-c http-sock)))
-                   (remaining-buffer-data nil))
-               ;; if the evbuffer has a length > 0, grab any data left on it
-               (unless (eq (le:evbuffer-get-length evbuf) 0)
-                 (setf remaining-buffer-data (as::drain-evbuffer evbuf)))
-               ;; write the response + any extra data back into the evbuffer
-               (le:evbuffer-unfreeze evbuf 0)  ; input buffers by default disable writing
-               (as::write-to-evbuffer evbuf (fast-io:finish-output-buffer http-bytes))
-               (when remaining-buffer-data
-                 ;; write existing data back onto end of evbuffer
-                 (as::write-to-evbuffer evbuf remaining-buffer-data))
-               (le:evbuffer-freeze evbuf 0)  ; re-enable write freeze
+             (let ((bytes (cl-async-util:buffer-output http-bytes)))
+               (cl-async::stream-append-bytes http-stream bytes)
                ;; send the finalized stream to the request-cb
-               (funcall request-cb http-stream)
-               ;; parsing should be done now (it's synchronous), so clear the
-               ;; evbuffer out in case we got a redirect and are re-using the
-               ;; stream
-               (le:evbuffer-drain evbuf 65536)
-               ;; reset the parser (in case we get a redirect on the same stream)
-               (funcall make-parser))))
+               (funcall request-cb http-stream))
+             (funcall make-parser)))
       (setf make-parser (lambda ()
                           (setf http (fast-http:make-http-response))
                           (setf parser (fast-http:make-parser http
                                                               :finish-callback #'finish-request))))
       (funcall make-parser)
       (let* ((existing-socket (get-underlying-socket stream))
-             (buffer (make-array 65536 :element-type '(unsigned-byte 8)))
-             (read-cb (lambda (sock stream)
-                        ;; store the http-stream so the other functions can access it
-                        (unless http-stream (setf http-stream stream))
-                        (unless http-sock (setf http-sock sock))
-                        (loop for num-bytes = (read-sequence buffer http-stream :end 8096)
-                              while (< 0 num-bytes) do
-                          (fast-io:fast-write-sequence buffer http-bytes 0 num-bytes)
-                          (funcall parser buffer :start 0 :end num-bytes))))
+             (read-cb (lambda (sock data)
+                        (declare (ignore sock))
+                        (cl-async-util:write-to-buffer data http-bytes)
+                        (funcall parser data)))
              (event-cb (lambda (ev)
                          (handler-case (error ev)
                            (as:tcp-eof ()
@@ -98,13 +77,15 @@
                 :event-cb event-cb)
               (make-instance 'as:async-io-stream :socket existing-socket))
             ;; new socket/stream
-            (apply (if ssl
-                       #'as-ssl:tcp-ssl-connect
-                       #'as:tcp-connect)
-                   (list 
-                     host port
-                     read-cb event-cb
-                     :read-timeout read-timeout
-                     :write-timeout write-timeout
-                     :stream t)))))))
+            (let ((sock (apply (if ssl
+                                 #'as-ssl:tcp-ssl-connect
+                                 #'as:tcp-connect)
+                               (list
+                                 host port
+                                 read-cb event-cb
+                                 :read-timeout read-timeout
+                                 :write-timeout write-timeout))))
+              (setf http-sock sock)
+              (setf http-stream (make-instance 'as:async-io-stream :socket sock))
+              http-stream))))))
 

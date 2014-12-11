@@ -27,6 +27,7 @@
     (when (subtypep (type-of tmp-stream) 'as:async-stream)
       (as:stream-socket tmp-stream))))
 
+(defparameter *test-data* nil)
 (defun http-request-complete-stream (host port request-cb event-cb &key ssl stream read-timeout write-timeout)
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
@@ -35,11 +36,14 @@
          (http-sock nil)
          (http nil)
          (http-bytes (cl-async-util:make-buffer))
+         (finished nil)
          (parser nil)
          (make-parser nil))
     (flet ((finish-request ()
+             (setf finished t)
              (clear-input http-stream)
-             (cl-async::stream-append-bytes http-stream (cl-async-util:buffer-output http-bytes))
+             (let ((bytes (cl-async-util:buffer-output http-bytes)))
+               (cl-async::stream-append-bytes http-stream bytes))
              ;; send the finalized stream to the request-cb
              (funcall request-cb http-stream)
              (funcall make-parser)))
@@ -54,10 +58,13 @@
                         ;; store the http-stream so the other functions can access it
                         (unless http-stream (setf http-stream stream))
                         (unless http-sock (setf http-sock sock))
-                        (loop for num-bytes = (read-sequence buffer http-stream :end 8096)
-                              while (< 0 num-bytes) do
-                          (cl-async-util:write-to-buffer buffer http-bytes 0 num-bytes)
-                          (funcall parser buffer :start 0 :end num-bytes))))
+                        (unless finished
+                          (loop for num-bytes = (read-sequence buffer http-stream :end 8096)
+                                while (< 0 num-bytes) do
+                            (cl-async-util:write-to-buffer buffer http-bytes 0 num-bytes)
+                            (push (subseq buffer 0 num-bytes) *test-data*)
+                            (funcall parser buffer :start 0 :end num-bytes)
+                            (when finished (return))))))
              (event-cb (lambda (ev)
                          (handler-case (error ev)
                            (as:tcp-eof ()

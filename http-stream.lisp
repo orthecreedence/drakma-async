@@ -31,17 +31,17 @@
   "Open a TCP stream to the given uri, determine when a full response has been
    returned from the host, and then fire the complete callback, at which point
    the response can be read from the stream."
-  (let* ((http-sock nil)
-         (http-stream nil)
+  (let* ((http-stream nil)
+         (http-sock nil)
          (http nil)
          (http-bytes (cl-async-util:make-buffer))
          (parser nil)
          (make-parser nil))
     (flet ((finish-request ()
-             (let ((bytes (cl-async-util:buffer-output http-bytes)))
-               (cl-async::stream-append-bytes http-stream bytes)
-               ;; send the finalized stream to the request-cb
-               (funcall request-cb http-stream))
+             (clear-input http-stream)
+             (cl-async::stream-append-bytes http-stream (cl-async-util:buffer-output http-bytes))
+             ;; send the finalized stream to the request-cb
+             (funcall request-cb http-stream)
              (funcall make-parser)))
       (setf make-parser (lambda ()
                           (setf http (fast-http:make-http-response))
@@ -49,10 +49,15 @@
                                                               :finish-callback #'finish-request))))
       (funcall make-parser)
       (let* ((existing-socket (get-underlying-socket stream))
-             (read-cb (lambda (sock data)
-                        (declare (ignore sock))
-                        (cl-async-util:write-to-buffer data http-bytes)
-                        (funcall parser data)))
+             (buffer (make-array 65536 :element-type '(unsigned-byte 8)))
+             (read-cb (lambda (sock stream)
+                        ;; store the http-stream so the other functions can access it
+                        (unless http-stream (setf http-stream stream))
+                        (unless http-sock (setf http-sock sock))
+                        (loop for num-bytes = (read-sequence buffer http-stream :end 8096)
+                              while (< 0 num-bytes) do
+                          (cl-async-util:write-to-buffer buffer http-bytes 0 num-bytes)
+                          (funcall parser buffer :start 0 :end num-bytes))))
              (event-cb (lambda (ev)
                          (handler-case (error ev)
                            (as:tcp-eof ()
@@ -77,15 +82,13 @@
                 :event-cb event-cb)
               (make-instance 'as:async-io-stream :socket existing-socket))
             ;; new socket/stream
-            (let ((sock (apply (if ssl
-                                 #'as-ssl:tcp-ssl-connect
-                                 #'as:tcp-connect)
-                               (list
-                                 host port
-                                 read-cb event-cb
-                                 :read-timeout read-timeout
-                                 :write-timeout write-timeout))))
-              (setf http-sock sock)
-              (setf http-stream (make-instance 'as:async-io-stream :socket sock))
-              http-stream))))))
+            (apply (if ssl
+                       #'as-ssl:tcp-ssl-connect
+                       #'as:tcp-connect)
+                   (list 
+                     host port
+                     read-cb event-cb
+                     :read-timeout read-timeout
+                     :write-timeout write-timeout
+                     :stream t)))))))
 

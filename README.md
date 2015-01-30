@@ -12,22 +12,22 @@ and does its absolute best to have the exact same behavior, except instead of
 returning the values of the HTTP request made, it returns a [cl-async future](http://orthecreedence.github.com/cl-async/future)
 that is finished with the values of the HTTP request.
 
-Here's a simple usage example (using the [cl-async future macros](http://orthecreedence.github.com/cl-async/future#nicer-syntax)):
+Here's a simple usage example (using the [blackbird promise implementation](http://orthecreedence.github.com/blackbird)):
 
 ```common-lisp
 (defun my-http-request ()
-  (future-handler-case
-    (multiple-future-bind (body status headers)
+  (catcher
+    (multiple-promise-bind (body status headers)
         (das:http-request "https://www.google.com/")
       (format t "Status: ~a~%" status)
       (format t "Headers: ~s~%" headers)
       (format t "Body: ~a~%" (if (stringp body) body (babel:octets-to-string body))))
     (http-eof ()
       (format t "Server hung up unexpectedly =[~%"))
-    (t (e)
+    (error (e)
       (format t "Error: ~a~%" e))))
 
-(as:start-event-loop #'my-http-request :catch-app-errors t)
+(as:start-event-loop #'my-http-request)
 ```
 
 ### Tests
@@ -38,6 +38,13 @@ Here's a simple usage example (using the [cl-async future macros](http://orthecr
 
 (drakma-async-test:run-tests)
 ```
+
+### Carrier
+
+drakma-async works well, but for an HTTP client that supports streaming (both
+upload and download) more natively, check out [carrier](https://github.com/orthecreedence/carrier).
+Carrier is built specifically to be used in an asynchronous setting, and may
+eventually deprecate drakma-async.
 
 ### SSL
 This library makes use of the `cl-async-ssl` package, which is an add-on package

@@ -22,7 +22,7 @@ Here's a simple usage example (using the [blackbird promise implementation](http
       (format t "Status: ~a~%" status)
       (format t "Headers: ~s~%" headers)
       (format t "Body: ~a~%" (if (stringp body) body (babel:octets-to-string body))))
-    (http-eof ()
+    (das:http-eof ()
       (format t "Server hung up unexpectedly =[~%"))
     (error (e)
       (format t "Error: ~a~%" e))))

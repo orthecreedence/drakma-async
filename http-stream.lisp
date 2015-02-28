@@ -94,7 +94,8 @@
                        #'as:tcp-connect)
                    (list 
                      host port
-                     read-cb event-cb
+                     read-cb
+                     :event-cb event-cb
                      :read-timeout read-timeout
                      :write-timeout write-timeout
                      :stream t)))))))

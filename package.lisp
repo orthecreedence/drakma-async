@@ -24,7 +24,7 @@
 
                 make-random-string
                 make-form-data-function
-                make-ssl-stream
+                #-lispworks make-ssl-stream
 
                 send-content
 

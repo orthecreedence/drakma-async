@@ -90,7 +90,8 @@
               (make-instance 'as:async-io-stream :socket existing-socket))
             ;; new socket/stream
             (apply (if ssl
-                       #'as-ssl:tcp-ssl-connect
+                       #-drakma-no-ssl #'as-ssl:tcp-ssl-connect
+                       #+drakma-no-ssl (error "Drakma SSL disabled; cannot proceed with HTTPS request.")
                        #'as:tcp-connect)
                    (list 
                      host port
